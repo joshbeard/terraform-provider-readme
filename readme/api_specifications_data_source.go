@@ -277,7 +277,7 @@ func sortAPISpecifications(specs []readme.APISpecification, sortBy string) ([]re
 		})
 	case "last_synced":
 		sort.Slice(specs, func(i, j int) bool {
-			return specs[i].LastSynced < specs[j].LastSynced
+			return specs[i].LastSynced > specs[j].LastSynced
 		})
 	default:
 		return nil, fmt.Errorf("invalid sort value: %s", sortBy)

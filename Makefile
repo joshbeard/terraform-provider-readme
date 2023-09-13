@@ -41,9 +41,13 @@ test: ## Run unit and race tests with 'go test'
 	go test -v -count=1 -parallel=4 -coverprofile=coverage.txt -covermode count ./readme/
 	go test -race -short ./readme/
 
+.PHONY: test-acc
+test-acc: ## Run acceptance tests with 'go test'
+	go test -v -count=1 -parallel=4 -coverprofile=coverage.txt -covermode count ./tests/...
+
 ## Coverage ##
 .PHONY: coverage
-coverage: test ## Generate a code test coverage report using 'gocover-cobertura'
+coverage: test-acc ## Generate a code test coverage report using 'gocover-cobertura'
 	go run github.com/boumenot/gocover-cobertura < coverage.txt > coverage.xml
 	rm -f coverage.txt
 
