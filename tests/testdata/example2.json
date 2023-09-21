@@ -2,10 +2,15 @@
   "openapi": "3.0.0",
   "info": {
     "version": "1.0.0",
-    "title": "Test API Spec"
+    "title": "Test API Spec 2"
   },
+  "servers": [
+    {
+      "url": "https://api.example.com/v1"
+    }
+  ],
   "paths": {
-    "/example": {
+    "/example2": {
       "get": {
         "summary": "Get Example Data",
         "responses": {

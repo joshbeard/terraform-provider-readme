@@ -1,3 +1,8 @@
+resource "readme_category" "test" {
+    title = "Test Category"
+    type  = "guide"
+}
+
 # The "readme_categories" data source retrieves a list of all categories for a ReadMe project.
 data "readme_categories" "example" {}
 

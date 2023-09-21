@@ -1,5 +1,4 @@
 # Manage docs on ReadMe.
-
 # Create a category
 resource "readme_category" "example" {
   title = "Example Category"

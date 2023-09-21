@@ -1,0 +1,4 @@
+---
+slug: foo
+---
+# My Doc

@@ -2,34 +2,19 @@ package readme_test
 
 import (
 	"context"
+	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/liveoaklabs/terraform-provider-readme/readme"
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	// testToken is a dummy token the provider is configured with and used
-	// throughout tests.
-	testToken = "hunter2"
-	// providerConfig is a shared configuration that sets a mock url and token.
-	// The URL points to our gock mock server.
-	providerConfig = (`
-		provider "readme" {
-			api_token = "` + testToken + `"
-		}
-	`)
-)
-
-// var testAccProviders map[string]*schema.Provider
-// var testAccProviders map[string]func() provider.Provider
-// var testAccProvider func() provider.Provider
-
 func TestProvider(t *testing.T) {
-	t.Parallel()
 	resp := provider.SchemaResponse{}
 
 	prov := readme.New("dev")()
@@ -45,28 +30,47 @@ var testProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, 
 	"readme": providerserver.NewProtocol6WithError(readme.New("dev")()),
 }
 
-// err := providerserver.Serve(context.Background(), readme.New(version), providerserver.ServeOpts{
-// 	Address: "registry.terraform.io/liveoaklabs/readme",
-// 	// This provider requires Terraform 1.0+
-// 	ProtocolVersion: 6,
-// })
-// if err != nil {
-// 	log.Fatal("Error setting up ReadMe provider:", err)
-// }
+func Test_Provider_MissingAPIToken(t *testing.T) {
+	// Ensure the README_API_TOKEN environment variable is unset.
+	// This is necessary because the provider will use the environment variable
+	// if the api_token field is not set or empty.
+	orig := os.Getenv("README_API_TOKEN")
+	os.Unsetenv("README_API_TOKEN")
 
-// func init() {
-// 	testAccProvider = New("dev")
-// 	testAccProviders = map[string]func() provider.Provider{
-// 		"readme": testAccProvider,
-// 	}
-// }
+	defer func() {
+		os.Setenv("README_API_TOKEN", orig)
+	}()
 
-// func TestProvider(t *testing.T) {
-// 	if err := New("dev").InternalValidate(); err != nil {
-// 		t.Fatalf("err: %s", err)
-// 	}
-// }
-//
-// func TestProvider_impl(t *testing.T) {
-// 	var _ *schema.Provider = Provider()
-// }
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+					provider "readme" {
+						api_token = ""
+					}
+					data "readme_project" "test" {}
+				`,
+				ExpectError: regexp.MustCompile(`Missing ReadMe API Token`),
+			},
+		},
+	})
+}
+
+func Test_Provider_EmptyAPIURL(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+					provider "readme" {
+						api_token = "hunter2"
+						api_url   = ""
+					}
+					data "readme_project" "test" {}
+				`,
+				ExpectError: regexp.MustCompile(`Missing ReadMe API URL`),
+			},
+		},
+	})
+}

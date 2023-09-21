@@ -1,0 +1,19 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.1.0",
+    "title": "Test API Spec 1 v1.1.0"
+  },
+  "paths": {
+    "/example": {
+      "get": {
+        "summary": "Get Example Data",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    }
+  }
+}

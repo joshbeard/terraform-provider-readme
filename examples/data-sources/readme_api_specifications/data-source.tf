@@ -1,11 +1,17 @@
 # Return all API specifications in a ReadMe project.
-data "readme_api_specifications" "all" {}
+data "readme_api_specifications" "all" {
+    sort_by = "title"
+}
+
+output "all_specs" {
+  value = data.readme_api_specifications.all
+}
 
 # Return specifications with a matching category title.
 data "readme_api_specifications" "filter" {
   filter = {
     category_title = [
-      "Test API specification 1",
+      "Test API Spec 1",
       "Test API specification 2",
     ]
   }
@@ -29,13 +35,13 @@ data "readme_api_specifications" "filter3" {
     ]
 
     category_title = [
-      "Test API specification 1",
-      "Test API specification 2",
+      "Test API Spec 1",
+      "Test API Spec 2",
     ]
 
     category_slug = [
-      "test-api-specification-3",
-      "test-api-specification-4",
+      "test-api-spec-3",
+      "test-api-spec-4",
     ]
 
     has_category = true

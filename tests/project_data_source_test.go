@@ -1,12 +1,23 @@
 package readme_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
-func TestProjectDataSource(t *testing.T) {
+var ReadmeProjectConfig = struct {
+	ProjectName string
+	Subdomain   string
+	Plan        string
+}{
+	ProjectName: "jbeard-202309",
+	Subdomain:   "jbeard-202309",
+	Plan:        "business2018",
+}
+
+func Test_Project_DataSource(t *testing.T) {
 	tfConfig := `data "readme_project" "test" {}`
 
 	resource.Test(t, resource.TestCase{
@@ -19,22 +30,22 @@ func TestProjectDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"data.readme_project.test",
 						"name",
-						"jbeard-202309",
+						ReadmeProjectConfig.ProjectName,
 					),
 					resource.TestCheckResourceAttr(
 						"data.readme_project.test",
 						"subdomain",
-						"jbeard-202309",
+						ReadmeProjectConfig.Subdomain,
 					),
 					resource.TestCheckResourceAttr(
 						"data.readme_project.test",
 						"base_url",
-						"https://jbeard-202309.readme.io",
+						fmt.Sprintf("https://%s.readme.io", ReadmeProjectConfig.Subdomain),
 					),
 					resource.TestCheckResourceAttr(
 						"data.readme_project.test",
 						"plan",
-						"business2018",
+						ReadmeProjectConfig.Plan,
 					),
 					// Verify placeholder id attribute.
 					// See https://developer.hashicorp.com/terraform/plugin/framework/acctests#implement-id-attribute

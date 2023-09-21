@@ -234,7 +234,7 @@ func (r *apiSpecificationResource) Create(
 	}
 
 	// Create the specification.
-	plan, err := r.save("create", "", plan)
+	plan, err := r.save(ctx, "create", "", plan)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to create API specification.", err.Error())
 
@@ -349,7 +349,7 @@ func (r *apiSpecificationResource) Update(
 	}
 
 	// Create the specification.
-	plan, err := r.save("update", state.ID.ValueString(), plan)
+	plan, err := r.save(ctx, "update", state.ID.ValueString(), plan)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to update API specification.", err.Error())
 
@@ -379,7 +379,7 @@ func (r *apiSpecificationResource) Delete(
 	_, apiResponse, err := r.client.APISpecification.Delete(state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to delete API specification.",
+			fmt.Sprintf("Unable to delete API specification %s.", state.ID.ValueString()),
 			clientError(err, apiResponse),
 		)
 
@@ -402,7 +402,7 @@ func (r *apiSpecificationResource) Delete(
 		_, apiResponse, err := r.client.Category.Delete(catSlug, opts)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Unable to delete category.",
+				fmt.Sprintf("Unable to delete API specification category %s.", catSlug),
 				clientError(err, apiResponse),
 			)
 
@@ -429,6 +429,7 @@ func (r *apiSpecificationResource) ImportState(
 // After creation or update, the specification is retrieved and `makePlan()` is called to map the results to the
 // Terraform resource schema that is returned.
 func (r *apiSpecificationResource) save(
+	ctx context.Context,
 	action, specID string, plan apiSpecificationResourceModel,
 ) (apiSpecificationResourceModel, error) {
 	var registry readme.APIRegistrySaved
