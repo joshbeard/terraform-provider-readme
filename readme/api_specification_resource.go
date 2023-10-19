@@ -463,13 +463,7 @@ func (r *apiSpecificationResource) save(
 	}
 
 	if err != nil {
-		var status int
-		if apiResponse != nil {
-			status = apiResponse.HTTPResponse.StatusCode
-		}
-
-		return apiSpecificationResourceModel{},
-			fmt.Errorf("unable to save: (%d) %+v", status, apiResponse.APIErrorResponse)
+		return apiSpecificationResourceModel{}, errors.New(clientError(err, apiResponse))
 	}
 
 	if response.ID == "" {
@@ -539,12 +533,11 @@ func (r *apiSpecificationResource) get(specID, version string) (readme.APISpecif
 	requestOptions := readme.RequestOptions{Version: version}
 	specification, apiResponse, err := r.client.APISpecification.Get(specID, requestOptions)
 	if err != nil {
-		// return specification, errors.New(clientError(err, apiResponse))
-		return specification, fmt.Errorf("unable to get specification id %s: %s", specID, string(apiResponse.Body))
+		return specification, errors.New(clientError(err, apiResponse))
 	}
 
 	if specification.ID == "" {
-		return specification, fmt.Errorf("specification response is empty for specification ID %s", specID)
+		return specification, errors.New("API specification not found")
 	}
 
 	return specification, nil
