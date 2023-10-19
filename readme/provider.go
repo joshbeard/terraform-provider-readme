@@ -201,6 +201,40 @@ func (p *readmeProvider) Resources(_ context.Context) []func() resource.Resource
 	}
 }
 
+// anyOtherAttributeModifier is a plan modifier that plans a change for an
+// attribute if any other attribute is changed.
+type anyOtherAttributeModifier struct{}
+
+// Description returns a plain text description of the modifier's behavior.
+func (m anyOtherAttributeModifier) Description(ctx context.Context) string {
+	return "If any other attribute is changed, this attribute will be changed."
+}
+
+// MarkdownDescription returns a markdown formatted description of the modifier's behavior.
+func (m anyOtherAttributeModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+// PlanModifyString implements a modifier for planning a change for an
+// attribute if any other attribute changes.
+func (m anyOtherAttributeModifier) PlanModifyInt64(
+	ctx context.Context,
+	req planmodifier.Int64Request,
+	resp *planmodifier.Int64Response,
+) {
+	// If any other attribute is changed, mark this attribute as unknown.
+	resp.PlanValue = types.Int64Unknown()
+}
+
+func (m anyOtherAttributeModifier) PlanModifyString(
+	ctx context.Context,
+	req planmodifier.StringRequest,
+	resp *planmodifier.StringResponse,
+) {
+	// If any other attribute is changed, mark this attribute as unknown.
+	resp.PlanValue = types.StringUnknown()
+}
+
 // otherAttributeModifier is a plan modifier that plans a change for an attribute if another specified attribute is changed.
 type otherAttributeModifier struct {
 	otherAttribute path.Path
@@ -245,6 +279,18 @@ func changedIfOther(attribute path.Path) planmodifier.String {
 	return otherAttributeModifier{
 		otherAttribute: attribute,
 	}
+}
+
+// int64ChangedIfAny returns a plan modifier that plans a change for an
+// attribute if any other attribute is changed.
+func int64ChangedIfAny() planmodifier.Int64 {
+	return anyOtherAttributeModifier{}
+}
+
+// stringChangedIfAny returns a plan modifier that plans a change for an
+// attribute if any other attribute is changed.
+func stringChangedIfAny() planmodifier.String {
+	return anyOtherAttributeModifier{}
 }
 
 // boolPoint returns a pointer to a boolean.
@@ -303,9 +349,12 @@ func versionClean(ctx context.Context, client *readme.Client, versionID string) 
 func clientError(err error, apiResponse *readme.APIResponse) string {
 	diagErr := err.Error()
 
-	if apiResponse != nil && apiResponse.APIErrorResponse.Message != "" {
-		diagErr += fmt.Sprintf("\nAPI Error Message: " + apiResponse.APIErrorResponse.Message)
+	if apiResponse == nil || apiResponse.APIErrorResponse.Message == "" {
+		return diagErr
 	}
+
+	diagErr = fmt.Sprintf("API Error Message: %s\n", apiResponse.APIErrorResponse.Message)
+	diagErr += fmt.Sprintf("API Error Response: %+v", apiResponse.APIErrorResponse)
 
 	return diagErr
 }

@@ -1,9 +1,9 @@
 # Manage docs on ReadMe.
 # Create a category
-resource "readme_category" "example" {
-  title = "Example Category"
-  type  = "guide"
-}
+# resource "readme_category" "example" {
+#     title = "My example category"
+#     type  = "guide"
+# }
 
 # Create a doc in the category
 resource "readme_doc" "example" {
@@ -12,7 +12,8 @@ resource "readme_doc" "example" {
 
   # category can be specified as an attribute or in the body front matter.
   # Use the `readme_category` resource to manage categories.
-  category = readme_category.example.id
+  # category = readme_category.example.id
+  category_slug = "tardo3"
 
   # category_slug can be specified as an attribute or in the body front matter.
   # category_slug = "foo-bar"
