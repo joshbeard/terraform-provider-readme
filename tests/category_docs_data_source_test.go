@@ -17,21 +17,24 @@ func Test_CategoryDocs_DataSource(t *testing.T) {
 						title = "Test Category0"
 						type  = "guide"
 					}
-					resource "readme_doc" "test1" {
-						title    = "Test Child Doc"
+					resource "readme_doc" "parent" {
+						title    = "Test Parent Doc"
 						hidden   = false
 						category = readme_category.test.id
+						body     = "parent doc"
 					}
-					resource "readme_doc" "test2" {
-						title    = "Test Another Child Doc"
-						hidden   = false
-						category = readme_category.test.id
+					resource "readme_doc" "child" {
+						title           = "Test Child Doc"
+						hidden          = false
+						category        = readme_category.test.id
+						body            = "child doc"
+						parent_doc_slug = readme_doc.parent.slug
 					}
 					data "readme_category_docs" "test" {
 						slug       = "test-category0"
 						depends_on = [
-							readme_doc.test1,
-							readme_doc.test2,
+							readme_doc.parent,
+							readme_doc.child,
 						]
 					}
 				`,
@@ -44,12 +47,12 @@ func Test_CategoryDocs_DataSource(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"data.readme_category_docs.test",
 						"docs.0.title",
-						"Test Child Doc",
+						"Test Parent Doc",
 					),
 					resource.TestCheckResourceAttr(
 						"data.readme_category_docs.test",
 						"docs.0.slug",
-						"test-child-doc",
+						"test-parent-doc",
 					),
 					resource.TestMatchResourceAttr(
 						"data.readme_category_docs.test",
