@@ -49,7 +49,6 @@ func generateFrontmatterTest(fmTest frontmatterTest) func(t *testing.T) {
 								regexp.MustCompile(fmt.Sprintf(`^%s$`, fmTest.AttrValue)),
 							),
 						),
-						ExpectNonEmptyPlan: true,
 					},
 					// === Frontmatter attribute is ignored when attribute is set.
 					{
@@ -61,7 +60,6 @@ func generateFrontmatterTest(fmTest frontmatterTest) func(t *testing.T) {
 								regexp.MustCompile(fmt.Sprintf(`^%s$`, fmTest.FMValue)),
 							),
 						),
-						ExpectNonEmptyPlan: true,
 					},
 				},
 			})
@@ -96,7 +94,7 @@ func TestDocResourceFrontMatter(t *testing.T) {
 			AttrConfig: `
 				resource "readme_doc" "test" {
 					title    = "My Test Doc"
-					body     = "---\ntitle: Frontmatter Title\n---\nThis is a test body"
+					body     = "---\ncategory_slug: second-category\n---\nThis is a test body"
 					category = readme_category.test.id
 					type     = "basic"
 				}`,
