@@ -88,7 +88,7 @@ func (m frontMatterModifier) PlanModifyString(
 			return
 		}
 		if value != (reflect.Value{}) {
-			tflog.Info(ctx, fmt.Sprintf("%s: setting value from front matter", req.Path))
+			tflog.Debug(ctx, fmt.Sprintf("%s: setting value from front matter", req.Path))
 			resp.PlanValue = types.StringValue(value.Interface().(string))
 
 			return
@@ -153,7 +153,7 @@ func (m frontMatterModifier) PlanModifyInt64(
 //
 // A string value is provided in place of an error for use with the plugin framework's diagnostics package.
 func valueFromFrontMatter(ctx context.Context, body, attribute string) (reflect.Value, string) {
-	tflog.Info(ctx, fmt.Sprintf("checking body front matter for attribute '%s'", attribute))
+	tflog.Debug(ctx, fmt.Sprintf("checking body front matter for attribute '%s'", attribute))
 
 	// Get the FrontMatter from the "body" attribute.
 	frontMatter := readmeFrontMatter{}
@@ -175,7 +175,7 @@ func valueFromFrontMatter(ctx context.Context, body, attribute string) (reflect.
 
 	// If the field exists and is empty, return an empty value.
 	if field.IsZero() {
-		tflog.Info(ctx, fmt.Sprintf("no front matter found for attribute %s", attribute))
+		tflog.Debug(ctx, fmt.Sprintf("no front matter found for attribute %s", attribute))
 
 		return reflect.Value{}, ""
 	}
