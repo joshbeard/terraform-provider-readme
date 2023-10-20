@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -173,9 +172,6 @@ func (r *docResource) Create(
 		return
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("beard: doc created. The revision is %d. Sleeping for 10 seconds.", response.Revision))
-	time.Sleep(10 * time.Second)
-
 	// Get the doc.
 	state, _, err = getDoc(r.client, ctx, response.Slug, plan, requestOpts)
 	if err != nil {
@@ -190,25 +186,6 @@ func (r *docResource) Create(
 
 		return
 	}
-
-	tflog.Info(ctx, fmt.Sprintf("beard: doc created. The revision is %d", state.Revision.ValueInt64()))
-
-	tflog.Info(ctx, fmt.Sprintf("beard: getting doc again", state.Revision.ValueInt64()))
-	state, _, err = getDoc(r.client, ctx, response.Slug, plan, requestOpts)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to create doc.",
-			fmt.Sprintf(
-				"There was a problem retrieving the doc '%s' after creation: %s.",
-				response.Slug,
-				err.Error(),
-			),
-		)
-
-		return
-	}
-
-	tflog.Info(ctx, fmt.Sprintf("beard: doc retrieved a second time. revision is %d", state.Revision.ValueInt64()))
 
 	// Set state to fully populated data.
 	diags = resp.State.Set(ctx, state)
@@ -242,8 +219,6 @@ func (r *docResource) Read(
 	slug := state.Slug.ValueString()
 	id := state.ID.ValueString()
 
-	tflog.Info(ctx, fmt.Sprintf("beard: Read() doc revision before refresh: %d", state.Revision.ValueInt64()))
-
 	// Get the doc.
 	state, apiResponse, err := getDoc(r.client, ctx, slug, state, requestOpts)
 	if err != nil {
@@ -270,8 +245,6 @@ func (r *docResource) Read(
 			return
 		}
 	}
-
-	tflog.Info(ctx, fmt.Sprintf("beard: Read() doc revision after refresh: %d", state.Revision.ValueInt64()))
 
 	// Set refreshed state.
 	diags = resp.State.Set(ctx, &state)
@@ -322,14 +295,6 @@ func (r *docResource) Update(
 		return
 	}
 
-	tflog.Info(ctx, fmt.Sprintf("beard: doc updated. The revision is %d", response.Revision))
-
-	delay := 5
-	tflog.Info(ctx, fmt.Sprintf("sleeping for %d seconds to allow doc to be indexed", delay))
-	// Sleep for a few seconds to allow the doc to be indexed.
-	// This is necessary to ensure that the doc is returned in search results.
-	time.Sleep(time.Duration(delay) * time.Second)
-
 	// Get the doc.
 	plan, _, err = getDoc(r.client, ctx, response.Slug, plan, requestOpts)
 	if err != nil {
@@ -344,7 +309,6 @@ func (r *docResource) Update(
 
 		return
 	}
-	tflog.Info(ctx, fmt.Sprintf("beard: got doc after update. The revision is %d", plan.Revision.ValueInt64()))
 
 	// Set refreshed state.
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
@@ -449,7 +413,17 @@ func (r *docResource) Schema(
 					"updated_at": schema.StringAttribute{
 						Computed: true,
 						PlanModifiers: []planmodifier.String{
-							stringChangedIfAny(),
+							// t
+							// stringChangeIfOtherString(path.Root("body")),
+							// stringChangeIfOtherString(path.Root("category")),
+							// stringChangeIfOtherString(path.Root("category_slug")),
+							// stringChangeIfOtherBool(path.Root("hidden")),
+							// stringChangeIfOtherInt64(path.Root("order")),
+							// stringChangeIfOtherString(path.Root("parent_doc")),
+							// stringChangeIfOtherString(path.Root("parent_doc_slug")),
+							// stringChangeIfOtherString(path.Root("slug")),
+							stringChangeIfOtherString(path.Root("title")),
+							// stringChangeIfOtherString(path.Root("type")),
 						},
 					},
 				},
@@ -732,11 +706,31 @@ func (r *docResource) Schema(
 				Description: "The ID of the project the doc is in.",
 				Computed:    true,
 			},
+			"title": schema.StringAttribute{
+				Description: "**Required.** The title of the doc." +
+					"This attribute may optionally be set in the body front matter.",
+				Computed: true,
+				Optional: true,
+				PlanModifiers: []planmodifier.String{
+					fromMatterString("Title"),
+				},
+			},
 			"revision": schema.Int64Attribute{
 				Description: "A number that is incremented upon doc updates.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64ChangedIfAny(),
+					// int64ChangeIfOtherString(path.Root("body")),
+					int64ChangeIfOtherString(path.Root("title"), "Title", true),
+					// int64ChangeIfOtherString(path.Root("body_html")),
+					// int64ChangeIfOtherString(path.Root("category")),
+					// int64ChangeIfOtherString(path.Root("category_slug")),
+					// int64ChangeIfOtherBool(path.Root("hidden")),
+					// int64ChangeIfOtherInt64(path.Root("order")),
+					// int64ChangeIfOtherString(path.Root("parent_doc")),
+					// int64ChangeIfOtherString(path.Root("parent_doc_slug")),
+					// int64ChangeIfOtherString(path.Root("slug")),
+					// int64ChangeIfOtherString(path.Root("title")),
+					// int64ChangeIfOtherString(path.Root("type")),
 				},
 			},
 			"slug": schema.StringAttribute{
@@ -749,15 +743,6 @@ func (r *docResource) Schema(
 			},
 			"sync_unique": schema.StringAttribute{
 				Computed: true,
-			},
-			"title": schema.StringAttribute{
-				Description: "**Required.** The title of the doc." +
-					"This attribute may optionally be set in the body front matter.",
-				Computed: true,
-				Optional: true,
-				PlanModifiers: []planmodifier.String{
-					fromMatterString("Title"),
-				},
 			},
 			"type": schema.StringAttribute{
 				Description: `**Required.** Type of the doc. The available types all show up under the /docs/ URL ` +
@@ -774,7 +759,16 @@ func (r *docResource) Schema(
 				Description: "The timestamp of when the doc was last updated.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringChangedIfAny(),
+					// stringChangeIfOtherString(path.Root("body")),
+					// stringChangeIfOtherString(path.Root("category")),
+					// stringChangeIfOtherString(path.Root("category_slug")),
+					// stringChangeIfOtherBool(path.Root("hidden")),
+					// stringChangeIfOtherInt64(path.Root("order")),
+					// stringChangeIfOtherString(path.Root("parent_doc")),
+					// stringChangeIfOtherString(path.Root("parent_doc_slug")),
+					// stringChangeIfOtherString(path.Root("slug")),
+					stringChangeIfOtherString(path.Root("title")),
+					// stringChangeIfOtherString(path.Root("type")),
 				},
 			},
 			"user": schema.StringAttribute{

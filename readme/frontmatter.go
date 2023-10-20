@@ -176,9 +176,12 @@ func valueFromFrontMatter(ctx context.Context, body, attribute string) (reflect.
 	// If the field exists and is empty, return an empty value.
 	if field.IsZero() {
 		tflog.Debug(ctx, fmt.Sprintf("no front matter found for attribute %s", attribute))
+		tflog.Info(ctx, fmt.Sprintf("no front matter found for attribute %s", attribute))
 
 		return reflect.Value{}, ""
 	}
+
+	tflog.Info(ctx, fmt.Sprintf("found front matter for attribute %s", attribute))
 
 	return field, ""
 }

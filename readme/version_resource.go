@@ -233,7 +233,7 @@ func (r *versionResource) Schema(
 				Description: "A 'clean' version string with certain characters replaced, usually a semantic version.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					changedIfOther(path.Root("version")),
+					stringChangeIfOtherString(path.Root("version")),
 				},
 			},
 		},

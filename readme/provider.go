@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -199,98 +198,6 @@ func (p *readmeProvider) Resources(_ context.Context) []func() resource.Resource
 		NewImageResource,
 		NewVersionResource,
 	}
-}
-
-// anyOtherAttributeModifier is a plan modifier that plans a change for an
-// attribute if any other attribute is changed.
-type anyOtherAttributeModifier struct{}
-
-// Description returns a plain text description of the modifier's behavior.
-func (m anyOtherAttributeModifier) Description(ctx context.Context) string {
-	return "If any other attribute is changed, this attribute will be changed."
-}
-
-// MarkdownDescription returns a markdown formatted description of the modifier's behavior.
-func (m anyOtherAttributeModifier) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-// PlanModifyString implements a modifier for planning a change for an
-// attribute if any other attribute changes.
-func (m anyOtherAttributeModifier) PlanModifyInt64(
-	ctx context.Context,
-	req planmodifier.Int64Request,
-	resp *planmodifier.Int64Response,
-) {
-	// If any other attribute is changed, mark this attribute as unknown.
-	resp.PlanValue = types.Int64Unknown()
-}
-
-func (m anyOtherAttributeModifier) PlanModifyString(
-	ctx context.Context,
-	req planmodifier.StringRequest,
-	resp *planmodifier.StringResponse,
-) {
-	// If any other attribute is changed, mark this attribute as unknown.
-	resp.PlanValue = types.StringUnknown()
-}
-
-// otherAttributeModifier is a plan modifier that plans a change for an attribute if another specified attribute is changed.
-type otherAttributeModifier struct {
-	otherAttribute path.Path
-}
-
-// Description returns a plain text description of the modifier's behavior.
-func (m otherAttributeModifier) Description(ctx context.Context) string {
-	return "If another attribute is changed, this attribute will be changed."
-}
-
-// MarkdownDescription returns a markdown formatted description of the modifier's behavior.
-func (m otherAttributeModifier) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-// PlanModifyString implements a modifier for planning a change for an attribute if another specified attribute
-// changes.
-func (m otherAttributeModifier) PlanModifyString(
-	ctx context.Context,
-	req planmodifier.StringRequest,
-	resp *planmodifier.StringResponse,
-) {
-	var otherPlanValue types.String
-	var otherStateValue types.String
-
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, m.otherAttribute, &otherPlanValue)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, m.otherAttribute, &otherStateValue)...)
-
-	// If the other attribute's value is unchanged, set the plan for this attribute to its current value (unchanged).
-	if otherPlanValue == otherStateValue {
-		resp.PlanValue = req.StateValue
-
-		return
-	}
-
-	// If the other attribute is changed, mark this attribute as unknown.
-	resp.PlanValue = types.StringUnknown()
-}
-
-// Custom plan modifier to flag an attribute for change if another specified attribute changes.
-func changedIfOther(attribute path.Path) planmodifier.String {
-	return otherAttributeModifier{
-		otherAttribute: attribute,
-	}
-}
-
-// int64ChangedIfAny returns a plan modifier that plans a change for an
-// attribute if any other attribute is changed.
-func int64ChangedIfAny() planmodifier.Int64 {
-	return anyOtherAttributeModifier{}
-}
-
-// stringChangedIfAny returns a plan modifier that plans a change for an
-// attribute if any other attribute is changed.
-func stringChangedIfAny() planmodifier.String {
-	return anyOtherAttributeModifier{}
 }
 
 // boolPoint returns a pointer to a boolean.

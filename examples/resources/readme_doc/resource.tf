@@ -8,12 +8,14 @@
 # Create a doc in the category
 resource "readme_doc" "example" {
   # title can be specified as an attribute or in the body front matter.
-  title = "My Example Doc"
+  body = "---\ntitle: Frontmatter Doc\n---\n\nHello! Welcome to my document!"
+  #title = "My Example Doc"
+  # body = "Hello! Welcome to my document!"
 
   # category can be specified as an attribute or in the body front matter.
   # Use the `readme_category` resource to manage categories.
   # category = readme_category.example.id
-  category_slug = "tardo3"
+  category_slug = "example"
 
   # category_slug can be specified as an attribute or in the body front matter.
   # category_slug = "foo-bar"
@@ -31,5 +33,4 @@ resource "readme_doc" "example" {
   # For best results, wrap the string with the `chomp()` function to remove
   # trailing newlines. ReadMe's API trims these implicitly.
   #body = chomp(file("mydoc.md"))
-  body = "Hello! Welcome to my document!"
 }
