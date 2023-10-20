@@ -202,6 +202,9 @@ func (m otherBoolChanged) modifyAttribute(ctx context.Context) {
 		}
 
 		resp.PlanValue = req.PlanValue
+	default:
+		tflog.Info(ctx, fmt.Sprintf(
+			"otherBoolChanged: unknown request type %T", m.req))
 	}
 }
 

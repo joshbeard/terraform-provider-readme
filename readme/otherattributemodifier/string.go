@@ -113,7 +113,8 @@ func (m otherStringChanged) loadValues(
 //
 // The repetition is necessary because the request and response types are
 // different for each type.
-func (m *otherStringChanged) modifyAttribute(ctx context.Context, resp interface{}) {
+// func (m *otherStringChanged) modifyAttribute(ctx context.Context, resp interface{}) {
+func (m *otherStringChanged) modifyAttribute(ctx context.Context) {
 	var isChanged bool
 	var diags diag.Diagnostics
 
@@ -131,7 +132,7 @@ func (m *otherStringChanged) modifyAttribute(ctx context.Context, resp interface
 
 		// If the value from frontmatter is not empty, compare it to the current state.
 		if value != (reflect.Value{}) {
-			tflog.Info(ctx, fmt.Sprintf(
+			tflog.Debug(ctx, fmt.Sprintf(
 				"%s was found in frontmatter with value %s",
 				m.otherAttribute, value))
 
@@ -139,18 +140,18 @@ func (m *otherStringChanged) modifyAttribute(ctx context.Context, resp interface
 			// plan, mark this attribute as changed.
 			isChanged = value.Interface().(string) != otherPlanValue.ValueString()
 		} else {
-			tflog.Info(ctx, fmt.Sprintf(
+			tflog.Debug(ctx, fmt.Sprintf(
 				"value for %s was not found in frontmatter",
 				m.otherAttribute))
 		}
 	} else {
 		// If the attribute is set, compare it to the current state and ignore
 		// the frontmatter.
-		tflog.Info(ctx, "otherStringChanged: not checking front matter")
+		tflog.Debug(ctx, "otherStringChanged: not checking front matter")
 		isChanged = otherConfigValue != otherStateValue && !otherStateValue.IsNull()
 	}
 
-	tflog.Info(ctx, fmt.Sprintf(
+	tflog.Debug(ctx, fmt.Sprintf(
 		"otherStringChanged: %s otherConfigValue (%s) otherStateValue (%s) isChanged (%v)",
 		m.otherAttribute, otherConfigValue, otherStateValue, isChanged))
 
@@ -158,11 +159,11 @@ func (m *otherStringChanged) modifyAttribute(ctx context.Context, resp interface
 	// an update. Otherwise, set it to the current plan value.
 	switch m.req.(type) {
 	case planmodifier.StringRequest:
-		resp := resp.(*planmodifier.StringResponse)
+		resp := m.resp.(*planmodifier.StringResponse)
 		req := m.req.(planmodifier.StringRequest)
 
 		if isChanged {
-			tflog.Info(ctx, fmt.Sprintf(
+			tflog.Debug(ctx, fmt.Sprintf(
 				"%s: setting value to unknown", req.Path))
 
 			resp.PlanValue = types.StringUnknown()
@@ -171,27 +172,27 @@ func (m *otherStringChanged) modifyAttribute(ctx context.Context, resp interface
 
 		resp.PlanValue = req.PlanValue
 	case planmodifier.Int64Request:
-		resp := resp.(*planmodifier.Int64Response)
+		resp := m.resp.(*planmodifier.Int64Response)
 		req := m.req.(planmodifier.Int64Request)
 
 		if isChanged {
-			tflog.Info(ctx, fmt.Sprintf(
+			tflog.Debug(ctx, fmt.Sprintf(
 				"%s: setting value to unknown", req.Path))
 
 			resp.PlanValue = types.Int64Unknown()
 			return
 		}
 
-		tflog.Info(ctx, fmt.Sprintf(
+		tflog.Debug(ctx, fmt.Sprintf(
 			"%s: setting value from plan", req.Path))
 
 		resp.PlanValue = req.PlanValue
 	case planmodifier.BoolRequest:
-		resp := resp.(*planmodifier.BoolResponse)
+		resp := m.resp.(*planmodifier.BoolResponse)
 		req := m.req.(planmodifier.BoolRequest)
 
 		if isChanged {
-			tflog.Info(ctx, fmt.Sprintf(
+			tflog.Debug(ctx, fmt.Sprintf(
 				"%s: setting value to unknown", req.Path))
 			resp.PlanValue = types.BoolUnknown()
 			return
@@ -213,7 +214,7 @@ func (m otherStringChanged) PlanModifyString(
 ) {
 	m.req = req
 	m.resp = resp
-	m.modifyAttribute(ctx, resp)
+	m.modifyAttribute(ctx)
 }
 
 // PlanModifyInt64 implements a modifier for planning a change for an
@@ -226,7 +227,7 @@ func (m otherStringChanged) PlanModifyInt64(
 ) {
 	m.req = req
 	m.resp = resp
-	m.modifyAttribute(ctx, resp)
+	m.modifyAttribute(ctx)
 }
 
 func (m otherStringChanged) PlanModifyBool(
@@ -236,5 +237,5 @@ func (m otherStringChanged) PlanModifyBool(
 ) {
 	m.req = req
 	m.resp = resp
-	m.modifyAttribute(ctx, resp)
+	m.modifyAttribute(ctx)
 }

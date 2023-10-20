@@ -189,6 +189,9 @@ func (m otherInt64Changed) modifyAttribute(ctx context.Context) {
 		}
 
 		resp.PlanValue = req.PlanValue
+	default:
+		tflog.Info(ctx, fmt.Sprintf(
+			"otherInt64Changed: unknown request type %T", m.req))
 	}
 }
 
