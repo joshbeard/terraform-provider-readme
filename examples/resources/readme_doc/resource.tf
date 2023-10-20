@@ -9,7 +9,7 @@
 resource "readme_doc" "example" {
   # title can be specified as an attribute or in the body front matter.
   body = "---\ntitle: Frontmatter Doc\n---\n\nHello! Welcome to my document!"
-  #title = "My Example Doc"
+  #title = "My Example Doc2"
   # body = "Hello! Welcome to my document!"
 
   # category can be specified as an attribute or in the body front matter.
