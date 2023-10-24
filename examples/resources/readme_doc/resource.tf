@@ -13,7 +13,8 @@ resource "readme_doc" "example" {
 
   # category can be specified as an attribute or in the body front matter.
   # Use the `readme_category` resource to manage categories.
-  category = readme_category.example.id
+  # category = readme_category.example.id
+  body = "---\ncategorySlug: example-category\n---\nHello! Welcome to my document!"
 
   # category_slug can be specified as an attribute or in the body front matter.
   # category_slug = "foo-bar"
@@ -31,5 +32,5 @@ resource "readme_doc" "example" {
   # For best results, wrap the string with the `chomp()` function to remove
   # trailing newlines. ReadMe's API trims these implicitly.
   #body = chomp(file("mydoc.md"))
-  body = "Hello! Welcome to my document!"
+  # body = "Hello! Welcome to my document!"
 }

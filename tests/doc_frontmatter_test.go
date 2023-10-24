@@ -93,23 +93,19 @@ func TestDocResourceFrontMatter(t *testing.T) {
 			AttrName: "category_slug",
 			AttrConfig: `
 				resource "readme_doc" "test" {
-					title    = "My Test Doc"
-					body     = "---\ncategory_slug: second-category\n---\nThis is a test body"
-					category = readme_category.test.id
-					type     = "basic"
+					title         = "My Test Doc"
+					body          = "---\ncategorySlug: ignored\n---\nThis is a test body"
+					category_slug = readme_category.test.slug
+					type          = "basic"
 				}`,
 			AttrValue: "test-category",
 			FMConfig: `
-				resource "readme_category" "second" {
-					title = "Second Category"
-					type  = "guide"
-				}
 				resource "readme_doc" "test" {
 					title    = "My Test Doc"
-					body     = "---\ncategory_slug: second-category\n---\nThis is a test body"
+					body     = "---\ncategorySlug: test-category\n---\nThis is a test body"
 					type     = "basic"
 				}`,
-			FMValue: "second-category",
+			FMValue: "test-category",
 		},
 	}
 
