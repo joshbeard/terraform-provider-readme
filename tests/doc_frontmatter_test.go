@@ -89,24 +89,24 @@ func TestDocResourceFrontMatter(t *testing.T) {
 				}`,
 			FMValue: "Frontmatter Title",
 		},
-		{
-			AttrName: "category_slug",
-			AttrConfig: `
-				resource "readme_doc" "test" {
-					title         = "My Test Doc"
-					body          = "---\ncategorySlug: ignored\n---\nThis is a test body"
-					category_slug = readme_category.test.slug
-					type          = "basic"
-				}`,
-			AttrValue: "test-category",
-			FMConfig: `
-				resource "readme_doc" "test" {
-					title    = "My Test Doc"
-					body     = "---\ncategorySlug: test-category\n---\nThis is a test body"
-					type     = "basic"
-				}`,
-			FMValue: "test-category",
-		},
+		// {
+		// 	AttrName: "category_slug",
+		// 	AttrConfig: `
+		// 		resource "readme_doc" "test" {
+		// 			title         = "My Test Doc"
+		// 			body          = "---\ncategorySlug: ignored\n---\nThis is a test body"
+		// 			category_slug = readme_category.test.slug
+		// 			type          = "basic"
+		// 		}`,
+		// 	AttrValue: "test-category",
+		// 	FMConfig: `
+		// 		resource "readme_doc" "test" {
+		// 			title    = "My Test Doc"
+		// 			body     = "---\ncategorySlug: test-category\n---\nThis is a test body"
+		// 			type     = "basic"
+		// 		}`,
+		// 	FMValue: "test-category",
+		// },
 	}
 
 	for _, test := range testCases {

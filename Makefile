@@ -43,7 +43,7 @@ test: ## Run unit and race tests with 'go test'
 
 .PHONY: test-acc
 test-acc: ## Run acceptance tests with 'go test'
-	go test -v -count=1 -parallel=4 -coverprofile=coverage.txt -covermode count ./tests/...
+	go test -v -count=1 -parallel=4 -coverprofile=coverage.txt -covermode count -coverpkg=./readme ./tests/...
 
 ## Coverage ##
 .PHONY: coverage

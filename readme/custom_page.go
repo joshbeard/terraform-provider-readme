@@ -65,21 +65,13 @@ func customPageResourceMapToModel(
 	page readme.CustomPage,
 	plan customPageResourceModel,
 ) customPageResourceModel {
-	if plan.Body.IsUnknown() {
-		plan.Body = types.StringValue("")
-	}
-
-	if plan.HTML.IsUnknown() {
-		plan.HTML = types.StringValue("")
-	}
-
 	return customPageResourceModel{
 		Algolia:    docModelAlgoliaValue(page.Algolia),
-		Body:       plan.Body,
+		Body:       types.StringValue(page.Body),
 		BodyClean:  types.StringValue(page.Body),
 		CreatedAt:  types.StringValue(page.CreatedAt),
 		FullScreen: types.BoolValue(page.Fullscreen),
-		HTML:       plan.HTML,
+		HTML:       types.StringValue(page.HTML),
 		HTMLClean:  types.StringValue(page.HTML),
 		HTMLMode:   types.BoolValue(page.HTMLMode),
 		Hidden:     types.BoolValue(page.Hidden),
