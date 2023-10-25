@@ -55,7 +55,7 @@ func (m FrontMatterModifier) PlanModifyString(
 	resp *planmodifier.StringResponse,
 ) {
 	var bodyPlanValue types.String
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("body"), &bodyPlanValue)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("body"), &bodyPlanValue)...)
 
 	// If the attribute isn't set, check the body front matter.
 	if req.ConfigValue.IsNull() {

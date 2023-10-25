@@ -68,6 +68,61 @@ func Test_Version_Resource(t *testing.T) {
 					),
 				),
 			},
+			// Test updating a version.
+			{
+				Config: `
+					resource "readme_version" "test" {
+					  version   = "1.1.1"
+					  from      = "1.0.0"
+					  is_stable = false
+					  is_hidden = false
+					  codename  = "test2"
+					}`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						"readme_version.test",
+						"codename",
+						"test2",
+					),
+				),
+			},
+			// === Test importing a version.
+			{
+				ResourceName:  "readme_version.test",
+				ImportState:   true,
+				ImportStateId: "1.1.1",
+			},
+		},
+	})
+}
+
+func Test_Version_Resource_Validation(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+					resource "readme_version" "test" {
+					  version   = "1.1.1"
+					  from      = "1.0.0"
+					  is_stable = true
+					  is_hidden = true
+					  codename  = "test"
+					}`,
+				ExpectError: regexp.MustCompile("A stable version cannot be hidden"),
+			},
+			{
+				Config: `
+					resource "readme_version" "test" {
+					  version       = "1.1.1"
+					  from          = "1.0.0"
+					  is_stable     = true
+					  is_hidden     = false
+					  is_deprecated = true
+					  codename      = "test"
+					}`,
+				ExpectError: regexp.MustCompile("A stable version cannot be deprecated"),
+			},
 		},
 	})
 }

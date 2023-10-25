@@ -138,54 +138,100 @@ func TestDocResourceImport(t *testing.T) {
 	})
 }
 
-// t.Run("Frontmatter for title attribute", func(t *testing.T) {
-// 	resource.Test(t, resource.TestCase{
-// 		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
-// 		Steps: []resource.TestStep{
-// 			// === Frontmatter title is used when set and title attribute is not set.
-// 			{
-// 				Config: `
-// 					resource "readme_category" "test" {
-// 						title = "Test Category"
-// 						type  = "guide"
-// 					}
-// 					resource "readme_doc" "test" {
-// 						title    = "My Test Doc"
-// 						body     = "---\ntitle: Title from Frontmatter\n---\nThis is a test body"
-// 						category = readme_category.test.id
-// 						type     = "basic"
-// 					}`,
-// 				Check: resource.ComposeAggregateTestCheckFunc(
-// 					resource.TestMatchResourceAttr(
-// 						"readme_doc.test",
-// 						"title",
-// 						regexp.MustCompile(`^My Test Doc$`),
-// 					),
-// 				),
-// 			},
-// 			// === Frontmatter attribute is ignored when attribute is set.
-// 			{
-// 				Config: `
-// 					resource "readme_category" "test" {
-// 						title = "Test Category"
-// 						type  = "guide"
-// 					}
-// 					resource "readme_doc" "test" {
-// 						body     = "---\ntitle: Title from Frontmatter\n---\nThis is a test body"
-// 						category = readme_category.test.id
-// 						type     = "basic"
-// 					}`,
-// 				Check: resource.ComposeAggregateTestCheckFunc(
-// 					resource.TestMatchResourceAttr(
-// 						"readme_doc.test",
-// 						"title",
-// 						regexp.MustCompile(`^Title from Frontmatter$`),
-// 					),
-// 				),
-// 			},
-// 		},
-// 	})
-// })
+func Test_Doc_Resource_FrontMatter(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// === Frontmatter attribute is ignored when attribute is set.
+			{
+				Config: `
+					resource "readme_category" "test" {
+						title = "Test Category"
+						type  = "guide"
+					}
+					resource "readme_doc" "test" {
+						title    = "My Test Doc"
+						body     = "---\ntitle: Title from Frontmatter\n---\nThis is a test body"
+						category = readme_category.test.id
+						type     = "basic"
+					}`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestMatchResourceAttr(
+						"readme_doc.test",
+						"title",
+						regexp.MustCompile(`^My Test Doc$`),
+					),
+				),
+			},
+			// === Frontmatter title is used when set and title attribute is not set.
+			{
+				Config: `
+					resource "readme_category" "test" {
+						title = "Test Category"
+						type  = "guide"
+					}
+					resource "readme_doc" "test" {
+						body     = "---\ntitle: Title from Frontmatter\n---\nThis is a test body"
+						category = readme_category.test.id
+						type     = "basic"
+					}`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestMatchResourceAttr(
+						"readme_doc.test",
+						"title",
+						regexp.MustCompile(`^Title from Frontmatter$`),
+					),
+				),
+			},
+			{
+				Config: `
+					resource "readme_category" "test" {
+						title = "Test Category"
+						type  = "guide"
+					}
+					resource "readme_doc" "test" {
+						body     = "---\ncategorySlug: test-category\ntitle: Title from Frontmatter\n---\nThis is a test body"
+						type     = "basic"
+					}`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						"readme_doc.test",
+						"category_slug",
+						"test-category",
+					),
+				),
+			},
+		},
+	})
+}
+
+func Test_Doc_Resource_Negatives(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// === Negative test for missing title attribute and frontmatter.
+			{
+				Config: `
+					resource "readme_doc" "test" {
+						body     = "This is a test body"
+						category = "ignored"
+						type     = "basic"
+					}`,
+				ExpectError: regexp.MustCompile(`doc title is required`),
+			},
+			// === Negative test for missing category attribute.
+			{
+				Config: `
+					resource "readme_doc" "test" {
+						title = "My Test Doc"
+						body  = "This is a test body"
+						type  = "basic"
+					}`,
+				ExpectError: regexp.MustCompile(`category or category_slug must be set\.`),
+			},
+		},
+	})
+}
 
 // func TestDocResource_Create_Errors(t *testing.T) {
 // 	// Close all gocks after completion.

@@ -48,6 +48,7 @@ dist/
 checkstyle-report.xml
 coverage.html
 coverage.xml
+coverage.html
 coverage.txt
 
 # Exclude local env files

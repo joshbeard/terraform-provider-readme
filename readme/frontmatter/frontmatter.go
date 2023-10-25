@@ -43,7 +43,7 @@ type ReadmeFrontMatter struct {
 // A string value is provided in place of an error for use with the plugin
 // framework's diagnostics package.
 func GetValue(ctx context.Context, body, attribute string) (reflect.Value, string) {
-	tflog.Debug(ctx, fmt.Sprintf("checking body front matter for attribute '%s'", attribute))
+	tflog.Debug(ctx, fmt.Sprintf("checking body front matter for attribute '%s'. body: %s", attribute))
 
 	// Get the FrontMatter from the "body" attribute.
 	frontMatter := ReadmeFrontMatter{}
@@ -52,7 +52,8 @@ func GetValue(ctx context.Context, body, attribute string) (reflect.Value, strin
 		return reflect.Value{}, err.Error()
 	}
 
-	tflog.Debug(ctx, fmt.Sprintf("body front matter=%+v", frontMatter))
+	tflog.Info(ctx, fmt.Sprintf("body string=%s", body))
+	tflog.Info(ctx, fmt.Sprintf("body front matter=%+v", frontMatter))
 
 	// Get the field value matching the attribute.
 	v := reflect.ValueOf(frontMatter)

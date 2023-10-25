@@ -93,6 +93,38 @@ func Test_Category_Resource(t *testing.T) {
 	})
 }
 
+func Test_Category_Resource_With_Version(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+					resource "readme_version" "test" {
+						from      = "1.0.0"
+						version   = "1.1.0"
+						is_stable = false
+						is_hidden = false
+						codename  = "test"
+					}
+
+					resource "readme_category" "test" {
+						title   = "Test Category"
+						type    = "guide"
+						version = readme_version.test.version_clean
+					}
+				`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						"readme_category.test",
+						"version",
+						"1.1.0",
+					),
+				),
+			},
+		},
+	})
+}
+
 func Test_Category_Resource_Validation_Error(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories,

@@ -74,6 +74,7 @@ func (r docResource) ValidateConfig(
 	// category or category_slug must be set. If the attributes aren't set, check the body front matter.
 	if data.Category.IsNull() && data.CategorySlug.IsNull() {
 		// check front matter for 'category'.
+		tflog.Info(ctx, "the body on validate: "+data.Body.ValueString())
 		categoryMatter, diag := frontmatter.GetValue(ctx, data.Body.ValueString(), "Category")
 		if diag != "" {
 			resp.Diagnostics.AddAttributeError(
