@@ -49,7 +49,10 @@ test-acc: ## Run acceptance tests with 'go test'
 .PHONY: coverage
 coverage: test-acc ## Generate a code test coverage report using 'gocover-cobertura'
 	go run github.com/boumenot/gocover-cobertura < coverage.txt > coverage.xml
-	rm -f coverage.txt
+
+.PHONY: coverage-html
+coverage-html: test-acc ## Generate a code test coverage report using 'go tool cover'
+	go tool cover -html=coverage.txt -o coverage.html
 
 ## Vulnerability checks ##
 .PHONY: check-vuln
