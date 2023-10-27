@@ -93,12 +93,6 @@ func TestDocResource(t *testing.T) {
 					),
 				),
 			},
-			// === Test importing a doc.
-			// {
-			// 	ResourceName:  "readme_doc.test",
-			// 	ImportState:   true,
-			// 	ImportStateId: "my-test-doc-updated",
-			// },
 		},
 	})
 }
@@ -107,7 +101,6 @@ func TestDocResourceImport(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// === Happy path doc creation test.
 			{
 				Config: `
 					resource "readme_category" "test" {
@@ -139,10 +132,10 @@ func TestDocResourceImport(t *testing.T) {
 }
 
 func Test_Doc_Resource_FrontMatter(t *testing.T) {
+	// === Frontmatter attribute is ignored when attribute is set.
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// === Frontmatter attribute is ignored when attribute is set.
 			{
 				Config: `
 					resource "readme_category" "test" {
@@ -163,7 +156,13 @@ func Test_Doc_Resource_FrontMatter(t *testing.T) {
 					),
 				),
 			},
-			// === Frontmatter title is used when set and title attribute is not set.
+		},
+	})
+
+	// === Frontmatter title is used when set and title attribute is not set.
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
 			{
 				Config: `
 					resource "readme_category" "test" {
@@ -183,6 +182,13 @@ func Test_Doc_Resource_FrontMatter(t *testing.T) {
 					),
 				),
 			},
+		},
+	})
+
+	// === Frontmatter title is used when set and title attribute is not set.
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
 			{
 				Config: `
 					resource "readme_category" "test" {
@@ -228,6 +234,16 @@ func Test_Doc_Resource_Negatives(t *testing.T) {
 						type  = "basic"
 					}`,
 				ExpectError: regexp.MustCompile(`category or category_slug must be set\.`),
+			},
+			// === Negative test for unparsable frontmatter.
+			{
+				Config: `
+					resource "readme_doc" "test" {
+						title = "My Test Doc"
+						body  = "---\nsome key\n---\nThis is a test body"
+						type  = "basic"
+					}`,
+				ExpectError: regexp.MustCompile(`cannot unmarshal`),
 			},
 		},
 	})

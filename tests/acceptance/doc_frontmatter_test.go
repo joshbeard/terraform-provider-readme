@@ -75,17 +75,19 @@ func TestDocResourceFrontMatter(t *testing.T) {
 			AttrName: "title",
 			AttrConfig: `
 				resource "readme_doc" "test" {
-					title    = "My Test Doc"
-					body     = "---\ntitle: Frontmatter Title\n---\nThis is a test body"
-					category = readme_category.test.id
-					type     = "basic"
+					title      = "My Test Doc"
+					body       = "---\ntitle: Frontmatter Title\n---\nThis is a test body"
+					category   = readme_category.test.id
+					type       = "basic"
+					depends_on = [ readme_category.test ]
 				}`,
 			AttrValue: "My Test Doc",
 			FMConfig: `
 				resource "readme_doc" "test" {
-					body     = "---\ntitle: Frontmatter Title\n---\nThis is a test body"
-					category = readme_category.test.id
-					type     = "basic"
+					body       = "---\ntitle: Frontmatter Title\n---\nThis is a test body"
+					category   = readme_category.test.id
+					type       = "basic"
+					depends_on = [ readme_category.test ]
 				}`,
 			FMValue: "Frontmatter Title",
 		},

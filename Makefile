@@ -38,12 +38,16 @@ lint: modverify vet gofumpt lines golangci-lint ## Run all linters
 ## Testing ##
 .PHONY: test
 test: ## Run unit and race tests with 'go test'
-	go test -v -count=1 -parallel=4 -coverprofile=coverage.txt -covermode count ./readme/
+	go test -v -count=1 -parallel=4 -coverprofile=coverage.txt -covermode count ./readme/ ./tests/
 	go test -race -short ./readme/
+
+.PHONY: test-unit
+test-unit: ## Run unit tests with 'go test'
+	go test -v -count=1 -parallel=4 -coverprofile=coverage.txt -covermode count -coverpkg=./readme/ ./tests/unit/...
 
 .PHONY: test-acc
 test-acc: ## Run acceptance tests with 'go test'
-	go test -v -count=1 -parallel=4 -coverprofile=coverage.txt -covermode count -coverpkg=./readme ./tests/...
+	TF_ACC=true go test -v -count=1 -parallel=4 -coverprofile=coverage.txt -covermode count -coverpkg=./readme ./tests/acceptance/...
 
 ## Coverage ##
 .PHONY: coverage

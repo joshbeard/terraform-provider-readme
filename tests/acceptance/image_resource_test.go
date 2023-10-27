@@ -13,7 +13,7 @@ func Test_Image_Resource_Create(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: `resource "readme_image" "test" {
-					source = "../examples/resources/readme_image/example.png"
+					source = "../../examples/resources/readme_image/example.png"
 				}`,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestMatchResourceAttr(
