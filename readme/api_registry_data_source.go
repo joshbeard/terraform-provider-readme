@@ -93,6 +93,24 @@ func (d *apiRegistryDataSource) Read(
 		return
 	}
 
+	if d.client == nil {
+		resp.Diagnostics.AddError(
+			"Unable to retrieve API registry metadata.",
+			"You must configure the provider with a valid API token and URL.",
+		)
+
+		return
+	}
+
+	if d.client.APIRegistry == nil {
+		resp.Diagnostics.AddError(
+			"Unable to retrieve API registry metadata.",
+			"You must configure the provider with a valid API token and URL. The APIRegistry service is nil.",
+		)
+
+		return
+	}
+
 	// Get the specification from the API registry
 	registry, apiResponse, err := d.client.APIRegistry.Get(uuid)
 	if err != nil {

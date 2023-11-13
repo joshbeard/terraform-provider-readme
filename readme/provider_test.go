@@ -11,11 +11,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/liveoaklabs/readme-api-go-client/readme"
+	"github.com/liveoaklabs/readme-api-go-client/tests/mocks"
 )
 
 // NewTest sets up the provider for testing.
 func NewTest(version string) provider.Provider {
-	return &readmeProvider{Version: "test"}
+	t := &testing.T{}
+	mockClient := mocks.NewReadmeClient(t)
+
+	return &readmeProvider{
+		Client:  mockClient,
+		Version: "test",
+	}
 }
 
 const (

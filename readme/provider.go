@@ -29,9 +29,10 @@ const (
 var _ provider.Provider = &readmeProvider{}
 
 // New is a helper function to simplify provider server and testing implementation.
-func New(version string) func() provider.Provider {
+func New(version string, client *readme.Client) func() provider.Provider {
 	return func() provider.Provider {
 		return &readmeProvider{
+			Client:  client,
 			Version: version,
 		}
 	}
@@ -40,6 +41,7 @@ func New(version string) func() provider.Provider {
 // readmeProvider is the provider implementation.
 type readmeProvider struct {
 	Version string
+	Client  interface{}
 }
 
 // readmeProviderModel maps provider schema data to a Go type.
@@ -84,6 +86,14 @@ func (p *readmeProvider) Schema(
 				Optional: true,
 			},
 		},
+	}
+}
+
+func newClient(apiToken, apiURL string) (*readme.Client, error) {
+	if apiURL == "" {
+		return readme.NewClient(apiToken)
+	} else {
+		return readme.NewClient(apiToken, apiURL)
 	}
 }
 
@@ -149,30 +159,36 @@ func (p *readmeProvider) Configure(
 
 	tflog.Debug(ctx, "Creating ReadMe client")
 
-	var client *readme.Client
 	var err error
 
-	if apiURL == "" {
-		client, err = readme.NewClient(apiToken)
-	} else {
-		client, err = readme.NewClient(apiToken, apiURL)
+	if p.Client == nil {
+		// Create a new Readme client using the configuration values
+		p.Client, err = newClient(apiToken, apiURL)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to Create Readme API Client.",
+				"An unexpected error occurred when creating the Readme API client. "+
+					"If the error is not clear, please contact the provider developers.\n\n"+
+					"Readme Client Error: "+err.Error(),
+			)
+
+			return
+		}
 	}
 
-	// Create a new Readme client using the configuration values
-	if err != nil {
+	if p.Client == nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Readme API Client.",
 			"An unexpected error occurred when creating the Readme API client. "+
-				"If the error is not clear, please contact the provider developers.\n\n"+
-				"Readme Client Error: "+err.Error(),
+				"If the error is not clear, please contact the provider developers.",
 		)
 
 		return
 	}
 
 	// Make the Readme client available during DataSource and Resource type Configure methods.
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	resp.DataSourceData = p.Client
+	resp.ResourceData = p.Client
 
 	tflog.Info(ctx, "Configured ReadMe client", map[string]any{"success": true})
 }

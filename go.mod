@@ -4,6 +4,8 @@ go 1.21
 
 require github.com/liveoaklabs/readme-api-go-client v0.1.3
 
+replace github.com/liveoaklabs/readme-api-go-client v0.1.3 => /home/josh/go/src/github.com/liveoaklabs/readme-api-go-client
+
 require (
 	github.com/adrg/frontmatter v0.2.0
 	github.com/boumenot/gocover-cobertura v1.2.0

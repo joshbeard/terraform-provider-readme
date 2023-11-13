@@ -65,7 +65,7 @@ func (d *apiSpecificationDataSource) Configure(
 		return
 	}
 
-	d.client = req.ProviderData.(*readme.Client)
+	// d.client = req.ProviderData.(*readme.Client)
 }
 
 // Schema defines the schema for the data source Terraform attributes.
