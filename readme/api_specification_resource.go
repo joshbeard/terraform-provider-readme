@@ -39,6 +39,7 @@ type apiSpecificationResourceModel struct {
 	DeleteCategory types.Bool   `tfsdk:"delete_category"`
 	UUID           types.String `tfsdk:"uuid"`
 	Definition     types.String `tfsdk:"definition"`
+	DefinitionNorm types.String `tfsdk:"definition_normalized"`
 	LastSynced     types.String `tfsdk:"last_synced"`
 	Semver         types.String `tfsdk:"semver"`
 	Source         types.String `tfsdk:"source"`
@@ -134,7 +135,7 @@ func (r *apiSpecificationResource) Schema(
 			"External changes made to an API specification managed by Terraform will not be detected due to the way " +
 			"the API registry works. When a specification definition is updated, the registry UUID changes and is " +
 			"only available from the response when the definition is published to the registry. When Terraform runs " +
-			"after an external update, there's no way of programatically retrieving the current state without the " +
+			"after an external update, there's no way of programmatically retrieving the current state without the " +
 			"current UUID. Forcing a Terraform update (e.g. tainting or a manual change) will get things " +
 			"synchronized again.\n\n" +
 			"## Importing Existing Specifications\n\n" +
@@ -174,6 +175,11 @@ func (r *apiSpecificationResource) Schema(
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+			"definition_normalized": schema.StringAttribute{
+				Description: "The normalized API specification definition JSON. This attribute is computed and " +
+					"read-only. It is used to compare the definition with the remote definition.",
+				Computed: true,
 			},
 			"delete_category": schema.BoolAttribute{
 				Description: "Delete the category associated with the API specification when the resource is deleted.",
@@ -270,7 +276,7 @@ func (r *apiSpecificationResource) Read(
 	}
 
 	// Track the current state definition.
-	currentDefinition := state.Definition
+	currentDefinition := state.DefinitionNorm
 
 	// Determine the version ID of the specification from the state or in the plan.
 	version := ""
@@ -324,15 +330,16 @@ func (r *apiSpecificationResource) Read(
 	}
 
 	state.DeleteCategory = plan.DeleteCategory
+	state.Definition = plan.Definition
 
 	// Compare the local state with the remote definition.
 	// The JSON keys/values are compared between the local and remote definition without regards to whitespace.
 	// Only update the state if they truly differ.
 	match, _ := jsonMatch(currentDefinition.ValueString(), remoteDefinition.ValueString())
 	if !match {
-		state.Definition = remoteDefinition
+		state.DefinitionNorm = remoteDefinition
 	} else {
-		state.Definition = currentDefinition
+		state.DefinitionNorm = currentDefinition
 	}
 
 	// Set refreshed state.
@@ -445,14 +452,26 @@ func (r *apiSpecificationResource) save(
 	var response readme.APISpecificationSaved
 	var apiResponse *readme.APIResponse
 
-	// If a semver is specified, use that.
-	version := ""
-	if plan.Semver.ValueString() != "" {
-		version = plan.Semver.ValueString()
+	version := plan.Semver.ValueString()
+	if plan.Version.ValueString() != "" {
+		version = IDPrefix + plan.Version.ValueString()
 	}
 
+	versionInfo, _, err := r.client.Version.Get(version)
+	if err != nil {
+		return apiSpecificationResourceModel{}, fmt.Errorf("error resolving version: %w", err)
+	}
+
+	version = versionInfo.VersionClean
+
+	// definition, err := normalizeDefinition(version, plan.Definition.ValueString())
+	// if err != nil {
+	// 	return apiSpecificationResourceModel{}, fmt.Errorf("unable to set info version: %w", err)
+	// }
+	definition := plan.DefinitionNorm.ValueString()
+
 	// Upload the API specification to the API registry.
-	registry, err := r.createRegistry(plan.Definition.ValueString(), version)
+	registry, err = r.createRegistry(definition, version)
 	if err != nil {
 		return apiSpecificationResourceModel{}, err
 	}
@@ -489,16 +508,82 @@ func (r *apiSpecificationResource) save(
 	}
 
 	deleteCategory := plan.DeleteCategory
+	origDefinition := plan.Definition
 
 	// Get the spec plan.
-	plan, err = r.makePlan(ctx, response.ID, plan.Definition, registry.RegistryUUID, version)
+	plan, err = r.makePlan(ctx, response.ID, plan.DefinitionNorm, registry.RegistryUUID, version)
 	if err != nil {
 		return apiSpecificationResourceModel{}, fmt.Errorf("unable to make plan: %+w", err)
 	}
 
 	plan.DeleteCategory = deleteCategory
+	plan.Definition = origDefinition
 
 	return plan, nil
+}
+
+// normalizeDefinition is a helper function that normalizes the definition JSON
+// by setting the `info:version` key to the parameter attribute version when set.
+func normalizeDefinition(version, definition string) (string, error) {
+	if version == "" {
+		return definition, nil
+	}
+
+	// Update the definition's version key to avoid churn.
+	definitionJSON := map[string]interface{}{}
+	err := json.Unmarshal([]byte(definition), &definitionJSON)
+	if err != nil {
+		return "", fmt.Errorf("unable to unmarshal definition: %w", err)
+	}
+
+	info, ok := definitionJSON["info"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("unable to get info from definition")
+	}
+
+	info["version"] = version
+	definitionJSON["info"] = info
+
+	// Marshal back to string.
+	definitionBytes, err := json.Marshal(definitionJSON)
+	if err != nil {
+		return "", fmt.Errorf("unable to marshal definition: %w", err)
+	}
+
+	return string(definitionBytes), nil
+}
+
+func (r *apiSpecificationResource) ModifyPlan(
+	ctx context.Context,
+	req resource.ModifyPlanRequest,
+	resp *resource.ModifyPlanResponse,
+) {
+	var plan, state *apiSpecificationResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+
+	if resp.Diagnostics.HasError() || plan == nil {
+		return
+	}
+
+	// Only modify the plan if the definition is changing
+	if plan.Definition.ValueString() == state.Definition.ValueString() {
+		return
+	}
+
+	// If the semver is set in the plan, ensure it is set in the definition.
+	definition, err := normalizeDefinition(plan.Semver.ValueString(), plan.Definition.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to set info version in definition.", err.Error())
+
+		return
+	}
+
+	plan.DefinitionNorm = types.StringValue(definition)
+
+	diags := resp.Plan.Set(ctx, plan)
+
+	resp.Diagnostics.Append(diags...)
 }
 
 // makePlan is a helper function that responds with a computed Terraform resource schema.
@@ -512,14 +597,12 @@ func (r *apiSpecificationResource) makePlan(
 	definition types.String,
 	registryUUID, version string,
 ) (apiSpecificationResourceModel, error) {
-	if strings.HasPrefix(version, IDPrefix) {
-		versionInfo, _, err := r.client.Version.Get(version)
-		if err != nil {
-			return apiSpecificationResourceModel{}, fmt.Errorf("error resolving version: %w", err)
-		}
-
-		version = versionInfo.VersionClean
+	versionInfo, _, err := r.client.Version.Get(version)
+	if err != nil {
+		return apiSpecificationResourceModel{}, fmt.Errorf("error resolving version: %w", err)
 	}
+
+	version = versionInfo.VersionClean
 
 	// Retrieve metadata about the API specification.
 	spec, err := r.get(ctx, specID, version)
@@ -528,16 +611,16 @@ func (r *apiSpecificationResource) makePlan(
 	}
 	// Map the plan to the resource struct.
 	plan := apiSpecificationResourceModel{
-		Category:   specCategoryObject(spec),
-		Definition: definition,
-		ID:         types.StringValue(spec.ID),
-		LastSynced: types.StringValue(spec.LastSynced),
-		Semver:     types.StringValue(version),
-		Source:     types.StringValue(spec.Source),
-		Title:      types.StringValue(spec.Title),
-		Type:       types.StringValue(spec.Type),
-		UUID:       types.StringValue(registryUUID),
-		Version:    types.StringValue(spec.Version),
+		Category:       specCategoryObject(spec),
+		DefinitionNorm: definition,
+		ID:             types.StringValue(spec.ID),
+		LastSynced:     types.StringValue(spec.LastSynced),
+		Semver:         types.StringValue(version),
+		Source:         types.StringValue(spec.Source),
+		Title:          types.StringValue(spec.Title),
+		Type:           types.StringValue(spec.Type),
+		UUID:           types.StringValue(registryUUID),
+		Version:        types.StringValue(spec.Version),
 	}
 
 	return plan, nil
@@ -550,7 +633,7 @@ func (r *apiSpecificationResource) get(ctx context.Context, specID, version stri
 	if err != nil {
 		tflog.Error(ctx, fmt.Sprintf("Unable to get specification: %+v", err))
 
-		return specification, fmt.Errorf("unable to get specification id %s: %w", specID, err)
+		return specification, fmt.Errorf("unable to get specification id %s (version %s): %w. request options: %+v", specID, version, err, requestOptions)
 	}
 
 	if specification.ID == "" {
