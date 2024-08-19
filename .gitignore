@@ -5,6 +5,7 @@ terraform-provider-readme
 bin
 *.tfstate*
 .terraform*
+*.auto.tfvars
 
 # Local .terraform directories
 **/.terraform/*

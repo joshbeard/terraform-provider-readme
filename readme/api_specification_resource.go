@@ -75,24 +75,17 @@ func (r *apiSpecificationResource) Configure(
 	r.client = req.ProviderData.(*readme.Client)
 }
 
-// jsonMatch compares two JSON strings without regards to formatting and returns a bool.
-// This function is used for comparing API specifications.
+// jsonMatch compares two JSON strings for equality.
 func jsonMatch(one, two string) (bool, error) {
-	var oneIntf, twoIntf interface{}
-	err := json.Unmarshal([]byte(one), &oneIntf)
-	if err != nil {
+	var oneRaw, twoRaw json.RawMessage
+	if err := json.Unmarshal([]byte(one), &oneRaw); err != nil {
 		return false, fmt.Errorf("error unmarshalling first item: %w", err)
 	}
-	err = json.Unmarshal([]byte(two), &twoIntf)
-	if err != nil {
+	if err := json.Unmarshal([]byte(two), &twoRaw); err != nil {
 		return false, fmt.Errorf("error unmarshalling second item: %w", err)
 	}
 
-	if reflect.DeepEqual(oneIntf, twoIntf) {
-		return true, nil
-	}
-
-	return false, nil
+	return reflect.DeepEqual(oneRaw, twoRaw), nil
 }
 
 // specCategoryObject maps a readme.CategorySummary type to a generic ObjectValue and returns the ObjectValue for use
@@ -237,7 +230,7 @@ func (r *apiSpecificationResource) Create(
 	req resource.CreateRequest,
 	resp *resource.CreateResponse,
 ) {
-	// Retrieve values from plan.
+	// Retrieve values from the plan.
 	var plan apiSpecificationResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -245,19 +238,11 @@ func (r *apiSpecificationResource) Create(
 		return
 	}
 
-	// Create the specification.
-	plan, err := r.save(ctx, saveActionCreate, "", plan)
-	if err != nil {
+	// Save the specification and update the state.
+	if updatedPlan, err := r.save(ctx, saveActionCreate, "", plan); err != nil {
 		resp.Diagnostics.AddError("Unable to create API specification.", err.Error())
-
-		return
-	}
-
-	// Set state to fully populated data.
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	} else {
+		resp.Diagnostics.Append(resp.State.Set(ctx, updatedPlan)...)
 	}
 }
 
@@ -267,85 +252,43 @@ func (r *apiSpecificationResource) Read(
 	req resource.ReadRequest,
 	resp *resource.ReadResponse,
 ) {
-	// Get current state.
-	var plan, state apiSpecificationResourceModel
+	// Retrieve the current state.
+	var state apiSpecificationResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Track the current state definition.
-	currentDefinition := state.DefinitionNorm
-
-	// Determine the version ID of the specification from the state or in the plan.
-	version := ""
-	if plan.Version.ValueString() != "" {
-		version = IDPrefix + plan.Version.ValueString()
-	}
-
-	// Get the spec definition from the API registry if a registry UUID is available in the registry.
-	// When importing, we do not have a UUID available and set the definition to empty.
-	var remoteDefinition types.String
-	if state.UUID.ValueString() != "" {
-		def, apiResponse, err := r.client.APIRegistry.Get(state.UUID.ValueString())
-		if err != nil {
-			if apiResponse != nil && apiResponse.APIErrorResponse.Error == "SPEC_NOTFOUND" {
-				resp.State.RemoveResource(ctx)
-
-				return
-			}
-
-			resp.Diagnostics.AddError(
-				fmt.Sprintf("Unable to read API specification: %+v", apiResponse.APIErrorResponse.Error),
-				clientError(err, apiResponse),
-			)
-
-			return
-		}
-
-		remoteDefinition = types.StringValue(def)
-	}
-
-	// Get the spec plan.
-	state, err := r.makePlan(
-		ctx,
-		state.ID.ValueString(),
-		currentDefinition,
-		state.UUID.ValueString(),
-		version,
-	)
+	version, err := r.resolveVersion(state)
 	if err != nil {
-		if strings.Contains(err.Error(), "API specification not found") {
-			tflog.Warn(ctx, fmt.Sprintf("API specification %s not found. Removing from state.", state.ID.ValueString()))
-			resp.State.RemoveResource(ctx)
+		resp.Diagnostics.AddError("Unable to resolve version.", err.Error())
 
-			return
+		return
+	}
+
+	if state.Definition.ValueString() == "" {
+		resp.Diagnostics.AddWarning("No definition provided. Skipping read.", "")
+	}
+
+	// Fetch the specification if a UUID is available.
+	if state.UUID.ValueString() != "" {
+		if updatedState, err := r.makePlan(ctx, state.ID.ValueString(), state.DefinitionNorm, state.UUID.ValueString(), version); err != nil {
+			if strings.Contains(err.Error(), "API specification not found") {
+				tflog.Warn(ctx, fmt.Sprintf("API specification %s not found. Removing from state.", state.ID.ValueString()))
+				resp.State.RemoveResource(ctx)
+			} else {
+				resp.Diagnostics.AddError("Unable to read API specification.", err.Error())
+			}
+		} else {
+			updatedState.DeleteCategory = state.DeleteCategory
+			match, _ := jsonMatch(state.Definition.ValueString(), updatedState.Definition.ValueString())
+			if !match {
+				state.Definition = updatedState.Definition
+			} else {
+				updatedState.Definition = state.Definition
+			}
+			resp.Diagnostics.Append(resp.State.Set(ctx, updatedState)...)
 		}
-		resp.Diagnostics.AddError(
-			fmt.Sprintf("Unable to read API specification: %+v", err),
-			err.Error())
-
-		return
-	}
-
-	state.DeleteCategory = plan.DeleteCategory
-	state.Definition = plan.Definition
-
-	// Compare the local state with the remote definition.
-	// The JSON keys/values are compared between the local and remote definition without regards to whitespace.
-	// Only update the state if they truly differ.
-	match, _ := jsonMatch(currentDefinition.ValueString(), remoteDefinition.ValueString())
-	if !match {
-		state.DefinitionNorm = remoteDefinition
-	} else {
-		state.DefinitionNorm = currentDefinition
-	}
-
-	// Set refreshed state.
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
-		return
 	}
 }
 
@@ -355,7 +298,7 @@ func (r *apiSpecificationResource) Update(
 	req resource.UpdateRequest,
 	resp *resource.UpdateResponse,
 ) {
-	// Retrieve values from plan and current state.
+	// Retrieve values from the plan and current state.
 	var plan, state apiSpecificationResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -363,18 +306,12 @@ func (r *apiSpecificationResource) Update(
 		return
 	}
 
-	// Create the specification.
-	plan, err := r.save(ctx, saveActionUpdate, state.ID.ValueString(), plan)
-	if err != nil {
+	// Update the specification and refresh the state.
+	if updatedPlan, err := r.save(ctx, saveActionUpdate, state.ID.ValueString(), plan); err != nil {
 		resp.Diagnostics.AddError("Unable to update API specification.", err.Error())
-
-		return
-	}
-
-	// Set refreshed state.
-	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
-	if resp.Diagnostics.HasError() {
-		return
+	} else {
+		updatedPlan.DeleteCategory = plan.DeleteCategory
+		resp.Diagnostics.Append(resp.State.Set(ctx, updatedPlan)...)
 	}
 }
 
@@ -410,8 +347,13 @@ func (r *apiSpecificationResource) Delete(
 		catSlug = strings.ReplaceAll(catSlug, "\"", "")
 
 		// Categories are versioned. Get the version ID from the state.
-		versionID := state.Version.ValueString()
-		version := versionClean(ctx, r.client, versionID)
+
+		version, err := r.resolveVersion(state)
+		if err != nil {
+			resp.Diagnostics.AddError("Unable to resolve version.", err.Error())
+
+			return
+		}
 
 		opts := readme.RequestOptions{Version: version}
 		_, apiResponse, err := r.client.Category.Delete(catSlug, opts)
@@ -436,90 +378,77 @@ func (r *apiSpecificationResource) ImportState(
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-// save is a helper function that performs the specified action and returns the responses.
-//
-// The provided plan definition is created in the ReadMe API registry, followed by a create or update of the
-// specification itself using the registry UUID.
-//
-// After creation or update, the specification is retrieved and `makePlan()` is called to map the results to the
-// Terraform resource schema that is returned.
 func (r *apiSpecificationResource) save(
 	ctx context.Context,
 	action saveAction,
-	specID string, plan apiSpecificationResourceModel,
+	specID string,
+	plan apiSpecificationResourceModel,
 ) (apiSpecificationResourceModel, error) {
-	var registry readme.APIRegistrySaved
-	var response readme.APISpecificationSaved
-	var apiResponse *readme.APIResponse
-
-	version := plan.Semver.ValueString()
-	if plan.Version.ValueString() != "" {
-		version = IDPrefix + plan.Version.ValueString()
-	}
-
-	versionInfo, _, err := r.client.Version.Get(version)
+	version, err := r.resolveVersion(plan)
 	if err != nil {
 		return apiSpecificationResourceModel{}, fmt.Errorf("error resolving version: %w", err)
 	}
 
-	version = versionInfo.VersionClean
-
-	// definition, err := normalizeDefinition(version, plan.Definition.ValueString())
-	// if err != nil {
-	// 	return apiSpecificationResourceModel{}, fmt.Errorf("unable to set info version: %w", err)
-	// }
 	definition := plan.DefinitionNorm.ValueString()
 
-	// Upload the API specification to the API registry.
-	registry, err = r.createRegistry(definition, version)
+	// Upload to the API registry.
+	registry, err := r.createRegistry(definition, version)
 	if err != nil {
-		return apiSpecificationResourceModel{}, err
+		return apiSpecificationResourceModel{}, fmt.Errorf("error creating registry: %w", err)
 	}
 
-	// Create or update an API specification associated with the API registry.
-	requestOptions := readme.RequestOptions{Version: version}
+	// Perform the create or update action.
+	response, err := r.performSaveAction(action, specID, registry.RegistryUUID, version)
+	if err != nil {
+		return apiSpecificationResourceModel{}, fmt.Errorf("error performing save action: %w", err)
+	}
+
+	// Create the final plan.
+	m, err := r.makePlan(ctx, response.ID, plan.DefinitionNorm, registry.RegistryUUID, version)
+	if err != nil {
+		return apiSpecificationResourceModel{}, fmt.Errorf("error creating plan: %w", err)
+	}
+
+	m.DeleteCategory = plan.DeleteCategory
+	m.Definition = plan.Definition
+
+	return m, nil
+}
+
+func (r *apiSpecificationResource) resolveVersion(
+	plan apiSpecificationResourceModel,
+) (string, error) {
+	// If a specific version is provided in the plan, use it.
+	if plan.Semver.ValueString() != "" {
+		return plan.Semver.ValueString(), nil
+	}
+
+	if plan.Version.ValueString() == "" {
+		return "", fmt.Errorf("no version or semver provided in the plan")
+	}
+
+	versionInfo, _, err := r.client.Version.Get(IDPrefix + plan.Version.ValueString())
+	if err != nil {
+		return "", fmt.Errorf("error resolving version: %w", err)
+	}
+
+	return versionInfo.VersionClean, nil
+}
+
+func (r *apiSpecificationResource) performSaveAction(
+	action saveAction,
+	specID, registryUUID, version string,
+) (readme.APISpecificationSaved, error) {
 	if action == saveActionUpdate {
-		response, apiResponse, err = r.client.APISpecification.Update(
-			specID,
-			UUIDPrefix+registry.RegistryUUID,
-		)
-	} else {
-		response, apiResponse, err = r.client.APISpecification.Create(
-			UUIDPrefix+registry.RegistryUUID,
-			requestOptions,
-		)
+
+		resp, _, err := r.client.APISpecification.Update(specID, UUIDPrefix+registryUUID)
+
+		return resp, err
 	}
+	requestOptions := readme.RequestOptions{Version: version}
+	resp, _, err := r.client.APISpecification.Create(UUIDPrefix+registryUUID, requestOptions)
 
-	if err != nil {
-		var status int
-		if apiResponse != nil {
-			status = apiResponse.HTTPResponse.StatusCode
-		}
-
-		return apiSpecificationResourceModel{},
-			fmt.Errorf("unable to save: (%d) %w", status, err)
-	}
-
-	if response.ID == "" {
-		return apiSpecificationResourceModel{}, fmt.Errorf(
-			"specification response is empty after saving: %+v",
-			response,
-		)
-	}
-
-	deleteCategory := plan.DeleteCategory
-	origDefinition := plan.Definition
-
-	// Get the spec plan.
-	plan, err = r.makePlan(ctx, response.ID, plan.DefinitionNorm, registry.RegistryUUID, version)
-	if err != nil {
-		return apiSpecificationResourceModel{}, fmt.Errorf("unable to make plan: %+w", err)
-	}
-
-	plan.DeleteCategory = deleteCategory
-	plan.Definition = origDefinition
-
-	return plan, nil
+	return resp, err
 }
 
 // normalizeDefinition is a helper function that normalizes the definition JSON
@@ -568,6 +497,10 @@ func (r *apiSpecificationResource) ModifyPlan(
 
 	// Only modify the plan if the definition is changing
 	if plan.Definition.ValueString() == state.Definition.ValueString() {
+		resp.Diagnostics.AddWarning("No changes detected in definition. Skipping plan modification.", "")
+		plan.DefinitionNorm = state.DefinitionNorm
+		plan.Definition = state.Definition
+
 		return
 	}
 
@@ -586,31 +519,19 @@ func (r *apiSpecificationResource) ModifyPlan(
 	resp.Diagnostics.Append(diags...)
 }
 
-// makePlan is a helper function that responds with a computed Terraform resource schema.
-//
-// If a version ID is provided instead of a semver, a call to the version API is
-// made to determine the semver.
-// `get()` is called to retrieve the remote specification that is mapped to the schema that is returned.
 func (r *apiSpecificationResource) makePlan(
 	ctx context.Context,
 	specID string,
 	definition types.String,
 	registryUUID, version string,
 ) (apiSpecificationResourceModel, error) {
-	versionInfo, _, err := r.client.Version.Get(version)
-	if err != nil {
-		return apiSpecificationResourceModel{}, fmt.Errorf("error resolving version: %w", err)
-	}
-
-	version = versionInfo.VersionClean
-
-	// Retrieve metadata about the API specification.
 	spec, err := r.get(ctx, specID, version)
 	if err != nil {
 		return apiSpecificationResourceModel{}, fmt.Errorf("error getting specification: %w", err)
 	}
+
 	// Map the plan to the resource struct.
-	plan := apiSpecificationResourceModel{
+	return apiSpecificationResourceModel{
 		Category:       specCategoryObject(spec),
 		DefinitionNorm: definition,
 		ID:             types.StringValue(spec.ID),
@@ -621,9 +542,7 @@ func (r *apiSpecificationResource) makePlan(
 		Type:           types.StringValue(spec.Type),
 		UUID:           types.StringValue(registryUUID),
 		Version:        types.StringValue(spec.Version),
-	}
-
-	return plan, nil
+	}, nil
 }
 
 // get is a helper function that retrieves a specification by ID and returns a readme.APISpecification struct.
