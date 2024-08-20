@@ -65,11 +65,11 @@
 
 ## v0.3.0 - 2024-01-19
 
-### 🚀 Features
+### Features
 
 - feat: changelog resource and data source @joshbeard (#100)
 
-### 🐛 Bug Fixes
+### Bug Fixes
 
 - fix: doc attribute inconsistencies @joshbeard (#101)
 
@@ -115,7 +115,7 @@
 
 ## v0.1.12 - 2023-04-18
 
-### 🚀 Features
+### Features
 
 - feat: Custom Pages data sources and resource @joshbeard (#27)
 
@@ -126,7 +126,7 @@
 
 ## v0.1.11 - 2023-03-31
 
-### 🐛 Bug Fixes
+### Bug Fixes
 
 - fix: Trim leading/trailing whitespace from docs @joshbeard (#23)
 
@@ -138,13 +138,13 @@
 
 ## v0.1.10 - 2023-03-27
 
-### 🚀 Features
+### Features
 
 - feat: Sort api_specifications data source @joshbeard (#20)
 
 ## v0.1.9 - 2023-03-24
 
-### 🚀 Features
+### Features
 
 - feat: Add api_specifications data source @joshbeard (#19)
 
@@ -152,13 +152,13 @@
 
 ### Changes
 
-### 🚀 Features
+### Features
 
 - feat: API spec data source filtering @joshbeard (#18)
 
 ## v0.1.7 - 2023-03-16
 
-### 🐛 Bug Fixes
+### Bug Fixes
 
 - fix: api spec data source - lookup by title @joshbeard (#17)
 
@@ -166,13 +166,13 @@
 
 ### Changes
 
-### 🐛 Bug Fixes
+### Bug Fixes
 
 - fix: Don't send conflicting request params @joshbeard (#14)
 
 ## v0.1.5 - 2023-03-06
 
-### 🐛 Bug Fixes
+### Bug Fixes
 
 - fix: image path validation @joshbeard (#11)
 
@@ -180,7 +180,7 @@
 
 ### Changes
 
-### 🚀 Features
+### Features
 
 - feature: image upload @joshbeard (#10)
 
@@ -188,7 +188,7 @@
 
 ### Changes
 
-### 🐛 Bug Fixes
+### Bug Fixes
 
 - fix: re-create deleted resources @joshbeard (#9)
 
