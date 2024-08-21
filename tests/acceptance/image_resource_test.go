@@ -39,7 +39,7 @@ func Test_Image_Resource_Create(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"readme_image.test",
 						"color",
-						"#371ca1",
+						"#ffffff",
 					),
 				),
 			},

@@ -12,10 +12,12 @@ var ReadmeProjectConfig = struct {
 	Subdomain   string
 	Plan        string
 }{
-	ProjectName: "jbeard-dev",
-	Subdomain:   "jbeard-dev2023",
-	// Plan:        "business2018",
-	Plan: "freelaunch",
+	ProjectName: "jbeard-2024-08",
+	Subdomain:   "jbeard-2024-08",
+
+	// During trial
+	Plan: "business2018",
+	// Plan: "freelaunch",
 }
 
 func Test_Project_DataSource(t *testing.T) {

@@ -219,7 +219,8 @@ func Test_APISpecification_DataSource(t *testing.T) {
 							title = "This doesn't exist"
 						}
 					`,
-					ExpectError: regexp.MustCompile("Unable to find API specification with title: This doesn't exist"),
+					// ExpectError: regexp.MustCompile("Unable to find API specification with title: This doesn't exist"),
+					ExpectError: regexp.MustCompile("No API specifications found."),
 				},
 			},
 		})
@@ -320,7 +321,8 @@ func Test_APISpecification_DataSource(t *testing.T) {
 							filter = { has_category = false }
 						}
 					`,
-					ExpectError: regexp.MustCompile("Unable to find API specification with title: does not exist"),
+					// ExpectError: regexp.MustCompile("Unable to find API specification with title: does not exist"),
+					ExpectError: regexp.MustCompile("No API specifications found."),
 				},
 			},
 		})

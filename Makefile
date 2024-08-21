@@ -47,7 +47,7 @@ test-unit: ## Run unit tests with 'go test'
 
 .PHONY: test-acc
 test-acc: ## Run acceptance tests with 'go test'
-	TF_ACC=true go test -v -count=1 -parallel=4 -coverprofile=coverage.txt -covermode count -coverpkg=./readme ./tests/acceptance/...
+	TF_ACC=true go test -v -count=1 -parallel=1 -coverprofile=coverage.txt -covermode count -coverpkg=./readme ./tests/acceptance/...
 
 ## Coverage ##
 .PHONY: coverage

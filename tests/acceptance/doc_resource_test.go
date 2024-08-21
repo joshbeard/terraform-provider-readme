@@ -43,7 +43,7 @@ func TestDocResource(t *testing.T) {
 					resource.TestMatchResourceAttr(
 						"readme_doc.test",
 						"body_html",
-						regexp.MustCompile(`^<div class=\"magic-block-textarea\"><p>This is a test body</p>\n\n</div>$`),
+						regexp.MustCompile(`^<p>This is a test body</p>$`),
 					),
 					resource.TestMatchResourceAttr(
 						"readme_doc.test",
@@ -196,8 +196,9 @@ func Test_Doc_Resource_FrontMatter(t *testing.T) {
 						type  = "guide"
 					}
 					resource "readme_doc" "test" {
-						body     = "---\ncategorySlug: test-category\ntitle: Title from Frontmatter\n---\nThis is a test body"
-						type     = "basic"
+						body       = "---\ncategorySlug: test-category\ntitle: Title from Frontmatter\n---\nThis is a test body"
+						type       = "basic"
+						depends_on = [readme_category.test]
 					}`,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(

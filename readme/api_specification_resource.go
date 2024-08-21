@@ -331,7 +331,7 @@ func (r *apiSpecResource) Delete(ctx context.Context, req resource.DeleteRequest
 	if _, apiResponse, err := r.client.APISpecification.Delete(state.ID.ValueString()); err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to delete API specification",
-			clientError(err, apiResponse),
+			fmt.Sprintf("%s\n%s\n%+v", err.Error(), clientError(err, apiResponse), apiResponse),
 		)
 
 		return
