@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	client "github.com/liveoaklabs/readme-api-go-client/readme"
 	"github.com/liveoaklabs/terraform-provider-readme/readme"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,17 +18,36 @@ import (
 func TestProvider(t *testing.T) {
 	resp := provider.SchemaResponse{}
 
-	prov := readme.New("dev")()
+	readmeClient, err := client.NewClient("dev", "hunter2")
+	if err != nil {
+		t.Fatalf("Error creating client: %s", err)
+	}
+
+	prov := readme.New("dev", readmeClient)()
 	prov.Schema(context.Background(), provider.SchemaRequest{}, &resp)
 
 	assert.False(t, resp.Diagnostics.HasError())
+}
+
+func setupTestProvider() provider.Provider {
+	token := os.Getenv("README_API_TOKEN")
+	client, err := client.NewClient(token)
+	if err != nil {
+		panic(err)
+	}
+	p := readme.New("dev", client)
+	if err != nil {
+		panic(err)
+	}
+
+	return p()
 }
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during
 // testing. The factory function will be invoked for every Terraform CLI command
 // executed to create a provider server to which the CLI can reattach.
 var testProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-	"readme": providerserver.NewProtocol6WithError(readme.New("dev")()),
+	"readme": providerserver.NewProtocol6WithError(setupTestProvider()),
 }
 
 func Test_Provider_MissingAPIToken(t *testing.T) {
