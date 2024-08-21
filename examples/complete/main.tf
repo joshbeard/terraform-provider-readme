@@ -63,6 +63,17 @@ resource "readme_doc" "example" {
   # use_slug = "existing-doc-slug"
 }
 
+resource "readme_doc" "pets" {
+  version       = readme_version.example.version_clean
+  category_slug = readme_api_specification.example.category.slug
+  hidden        = false
+  order         = 2
+  type          = "basic"
+  body          = file("${path.module}/pets.md")
+  use_slug      = "pets"
+}
+
+
 resource "readme_api_specification" "example" {
   definition      = file("${path.module}/petstore.json")
   semver          = readme_version.example.version_clean
@@ -72,7 +83,7 @@ resource "readme_api_specification" "example" {
 resource "readme_changelog" "example" {
   body   = file("${path.module}/changelog/2024-08-19.md")
   hidden = false
-  type  = "added"
+  type   = "added"
 
   # The title is set in frontmatter
   # title = "2024-08-19"
