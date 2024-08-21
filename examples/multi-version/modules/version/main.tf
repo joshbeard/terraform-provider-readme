@@ -13,9 +13,6 @@ variable "api_token" {
 
 provider "readme" {
   api_token = var.api_token
-  features = {
-    destroy_docs_children = true
-  }
 }
 
 
@@ -99,3 +96,4 @@ resource "readme_changelog" "example" {
 resource "readme_image" "example" {
   source = "${path.module}/../../.github/readme/lob-logo.png"
 }
+

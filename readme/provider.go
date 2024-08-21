@@ -46,6 +46,11 @@ type readmeProvider struct {
 type readmeProviderModel struct {
 	APIToken types.String `tfsdk:"api_token"`
 	APIURL   types.String `tfsdk:"api_url"`
+	Features types.Object `tfsdk:"features"`
+}
+
+type providerFeatures struct {
+	DestroyDocsChildren bool `tfsdk:"destroy_docs_children"`
 }
 
 // saveAction is a custom type to represent the action to take when saving a
@@ -90,6 +95,16 @@ func (p *readmeProvider) Schema(
 					"environment variable or left unset to use the default.",
 				MarkdownDescription: "URL for accessing the ReadMe API. May also be set with the `README_API_URL` " +
 					"environment variable or left unset to use the default.",
+				Optional: true,
+			},
+			"features": schema.SingleNestedAttribute{
+				Description: "Provider features.",
+				Attributes: map[string]schema.Attribute{
+					"destroy_docs_children": schema.BoolAttribute{
+						Description: "Destroy child docs when destroying a parent doc.",
+						Optional:    true,
+					},
+				},
 				Optional: true,
 			},
 		},

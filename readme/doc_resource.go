@@ -529,6 +529,34 @@ func (r *docResource) Delete(
 	requestOpts := apiRequestOptions(state.Version)
 	tflog.Info(ctx, fmt.Sprintf("deleting doc with request options=%+v", requestOpts))
 
+	// Get category docs
+	docs, _, err := r.client.Category.GetDocs(state.CategorySlug.ValueString(), requestOpts)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to retrieve category docs.", clientError(err, nil))
+	}
+
+	// Check for any child docs
+	for _, doc := range docs {
+		if doc.ID != state.ID.ValueString() {
+			continue
+		}
+
+		if len(doc.Children) > 0 {
+			slugs := []string{}
+			for _, child := range doc.Children {
+				slugs = append(slugs, child.Slug)
+			}
+
+			// Get the provider's attribute
+			resp.Diagnostics.AddError(
+				"Unable to delete doc.",
+				fmt.Sprintf("Doc has child docs. Delete child docs first (%+v).", slugs),
+			)
+
+			return
+		}
+	}
+
 	// Delete the doc.
 	_, apiResponse, err := r.client.Doc.Delete(state.Slug.ValueString(), requestOpts)
 	if err != nil {
