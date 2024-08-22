@@ -50,6 +50,7 @@ var (
 // apiSpecResource is the resource implementation.
 type apiSpecResource struct {
 	client *readme.Client
+	config providerConfig
 }
 
 // apiSpecResourceModel maps the struct from the ReadMe client library to Terraform attributes.
@@ -83,7 +84,9 @@ func (r *apiSpecResource) Configure(_ context.Context, req resource.ConfigureReq
 		return
 	}
 
-	r.client = req.ProviderData.(*readme.Client)
+	cfg := req.ProviderData.(*providerData)
+	r.client = cfg.client
+	r.config = cfg.config
 }
 
 // specCategoryObject maps a readme.CategorySummary type to a generic ObjectValue and returns the ObjectValue for use

@@ -59,7 +59,7 @@ func TestCategoryDataSource(t *testing.T) {
 						AddHeader("x-total-count", "1").
 						JSON(mockCategoryList)
 				},
-				Config: providerConfig + `data "readme_category" "test" { slug = "` + mockCategory.Slug + `" }`,
+				Config: testProviderConfig + `data "readme_category" "test" { slug = "` + mockCategory.Slug + `" }`,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(
 						"data.readme_category.test",
@@ -133,7 +133,7 @@ func TestCategoryDataSource_GetError(t *testing.T) {
 						Reply(404).
 						JSON(expectResponse)
 				},
-				Config:      providerConfig + `data "readme_category" "test" { slug = "doesntexist" }`,
+				Config:      testProviderConfig + `data "readme_category" "test" { slug = "doesntexist" }`,
 				ExpectError: expectError,
 			},
 		},

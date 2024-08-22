@@ -22,7 +22,7 @@ func TestDocResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Test successful creation.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "%s"
@@ -43,7 +43,7 @@ func TestDocResource(t *testing.T) {
 
 			// Test that a new doc gets created if it's deleted outside of Terraform.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "%s"
@@ -107,7 +107,7 @@ func TestDocResource(t *testing.T) {
 
 			// Test update results in error when the pre-update read fails.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "Update"
 						body     = "%s"
@@ -125,7 +125,7 @@ func TestDocResource(t *testing.T) {
 
 			// Test update results in error when the update action fails.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "Update 2"
 						body     = "%s"
@@ -154,7 +154,7 @@ func TestDocResource(t *testing.T) {
 
 			// Test update results in error when post-update read fails.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "Update"
 						body     = "%s"
@@ -182,7 +182,7 @@ func TestDocResource(t *testing.T) {
 			// Test delete error when API responds with 400.
 			{
 				Destroy: true,
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "%s"
@@ -202,7 +202,7 @@ func TestDocResource(t *testing.T) {
 
 			// Test successful update when title changes.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "Update"
 						body     = "%s"
@@ -283,7 +283,7 @@ func TestDocResource_Create_Errors(t *testing.T) {
 				ProtoV6ProviderFactories: testProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
 					{
-						Config: providerConfig + fmt.Sprintf(`
+						Config: testProviderConfig + fmt.Sprintf(`
 							resource "readme_doc" "test" {
 								title    = "Update"
 								category = "%s"
@@ -617,7 +617,7 @@ func TestDocResource_FrontMatter(t *testing.T) {
 				ProtoV6ProviderFactories: testProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
 					{
-						Config: providerConfig + fmt.Sprintf(
+						Config: testProviderConfig + fmt.Sprintf(
 							`
 								resource "readme_doc" "test" {
 									body = chomp("%s")
@@ -701,7 +701,7 @@ func TestDocResource_User_Attribute_Changes(t *testing.T) {
 		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "%s"
@@ -724,7 +724,7 @@ func TestDocResource_User_Attribute_Changes(t *testing.T) {
 				),
 			},
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "updated body"
@@ -768,7 +768,7 @@ func TestDocResource_Hidden_Attribute_Changes(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create doc with hidden initially unset.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "body"
@@ -795,7 +795,7 @@ func TestDocResource_Hidden_Attribute_Changes(t *testing.T) {
 			},
 			// Change the 'hidden' attribute to true.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "body"
@@ -823,7 +823,7 @@ func TestDocResource_Hidden_Attribute_Changes(t *testing.T) {
 			},
 			// Change to setting the 'hidden' attribute in front matter.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 					    body     = "---\nhidden: false\n---\nbody"
@@ -850,7 +850,7 @@ func TestDocResource_Hidden_Attribute_Changes(t *testing.T) {
 			},
 			// Change back to setting 'hidden' on the resource.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "body"
@@ -878,7 +878,7 @@ func TestDocResource_Hidden_Attribute_Changes(t *testing.T) {
 			},
 			// Change 'hidden' to false.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "body"
@@ -906,7 +906,7 @@ func TestDocResource_Hidden_Attribute_Changes(t *testing.T) {
 			},
 			// Remove the 'hidden' attribute. It remains unchanged.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "body"
@@ -951,7 +951,7 @@ func TestDocResource_Order_Attribute_Changes(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create doc with order set.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "%s"
@@ -979,7 +979,7 @@ func TestDocResource_Order_Attribute_Changes(t *testing.T) {
 			},
 			// Change the order attribute.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "%s"
@@ -1006,7 +1006,7 @@ func TestDocResource_Order_Attribute_Changes(t *testing.T) {
 			},
 			// Change to setting order in front matter.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "---\norder: 3\n---\nbody"
@@ -1034,7 +1034,7 @@ func TestDocResource_Order_Attribute_Changes(t *testing.T) {
 			},
 			// Change back to setting order in the resource.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 					    body     = "%s"
@@ -1062,7 +1062,7 @@ func TestDocResource_Order_Attribute_Changes(t *testing.T) {
 			},
 			// Remove the order attribute. It is left unchanged.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "%s"
@@ -1108,7 +1108,7 @@ func TestDocResource_Order_FrontMatter_Changes(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create doc with order set in front matter.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "---\norder: 1\n---\nbody"
@@ -1133,7 +1133,7 @@ func TestDocResource_Order_FrontMatter_Changes(t *testing.T) {
 			},
 			// Change the order attribute in front matter.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "---\norder: 2\n---\nbody"
@@ -1161,7 +1161,7 @@ func TestDocResource_Order_FrontMatter_Changes(t *testing.T) {
 			},
 			// Remove the order attribute.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "body"
@@ -1212,7 +1212,7 @@ func TestDocRenamedSlugResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Test successful creation.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "%s"
@@ -1234,7 +1234,7 @@ func TestDocRenamedSlugResource(t *testing.T) {
 			// Test that the doc can be renamed outside of Terraform and
 			// continue to be managed by Terraform.
 			{
-				Config: providerConfig + fmt.Sprintf(`
+				Config: testProviderConfig + fmt.Sprintf(`
 					resource "readme_doc" "test" {
 						title    = "%s"
 						body     = "%s"

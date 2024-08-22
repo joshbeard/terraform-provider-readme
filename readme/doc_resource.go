@@ -23,6 +23,53 @@ import (
 	"github.com/liveoaklabs/terraform-provider-readme/readme/frontmatter"
 )
 
+const docResourceDesc = `
+Manage docs on ReadMe.com
+
+See <https://docs.readme.com/main/reference/getdoc> for more information about this API endpoint.
+
+## Front Matter
+
+Docs on ReadMe support setting some attributes using front matter. 
+Resource attributes take precedence over front matter attributes in the provider.
+
+Refer to <https://docs.readme.com/main/docs/rdme> for more information about using front matter 
+in ReadMe docs and custom pages.
+
+## Doc Slugs
+
+Docs in ReadMe are uniquely identified by their slugs. The slug is a URL-friendly string that 
+is generated upon doc creation. By default, this is a normalized version of the doc title. 
+The slug cannot be altered using the API or the Terraform Provider, but can be edited in the 
+ReadMe web UI.
+
+This creates challenges when managing docs with Terraform. To address this, the provider supports 
+the **use_slug** attribute. When set, the provider will attempt to manage an existing 
+doc by its slug. This can also be set in front matter using the **slug** key.
+
+If this attribute is set and the doc does not exist, an error will be returned. This is intended 
+to be set when inheriting management of an existing doc or when customizing the slug *after* 
+the doc has been created.
+
+Note that doc slugs are shared between Guides and API Specification References.
+
+⚠️ **Experimental:** The 'use_slug' attribute is experimental and may result in unexpected behavior.
+
+## Destroying Docs with Children
+
+Docs in ReadMe can have child docs. 
+Terraform can infer a doc's relationship when they are all managed by the provider and delete them
+in the proper order as normal when referenced appropriately or when using **depends_on**.
+
+However, when managing docs with children, the provider may not be able to infer the relationship
+between parent and child docs, particularly in edge cases such as using the **use_slug** attribute
+to manage an API reference's parent doc.
+
+When destroying a doc, the provider will check for child docs and prevent deletion if they exist.
+This behavior can be controlled with the **config.destroy_child_docs** attribute. When set to true,
+the provider will destroy child docs prior to deleting the parent doc.
+`
+
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &docResource{}
@@ -33,6 +80,7 @@ var (
 // docResource is the data source implementation.
 type docResource struct {
 	client *readme.Client
+	config providerConfig
 }
 
 // NewDocResource is a helper function to simplify the provider implementation.
@@ -59,7 +107,9 @@ func (r *docResource) Configure(
 		return
 	}
 
-	r.client = req.ProviderData.(*readme.Client)
+	cfg := req.ProviderData.(*providerData)
+	r.client = cfg.client
+	r.config = cfg.config
 }
 
 // ValidateConfig is used for validating attribute values.
@@ -527,40 +577,79 @@ func (r *docResource) Delete(
 	}
 
 	requestOpts := apiRequestOptions(state.Version)
-	tflog.Info(ctx, fmt.Sprintf("deleting doc with request options=%+v", requestOpts))
 
-	// Get category docs
+	// Retrieve all docs in the category to start the deletion process.
+	tflog.Info(ctx, fmt.Sprintf("retrieving category docs with request options=%+v", requestOpts))
 	docs, _, err := r.client.Category.GetDocs(state.CategorySlug.ValueString(), requestOpts)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to retrieve category docs.", clientError(err, nil))
+
+		return
 	}
 
-	// Check for any child docs
-	for _, doc := range docs {
-		if doc.ID != state.ID.ValueString() {
-			continue
-		}
+	// A slice to store the slugs of the docs to delete, including the parent and its children.
+	var slugsToDelete []string
+	var parentDoc *readme.CategoryDocs
 
-		if len(doc.Children) > 0 {
-			slugs := []string{}
+	// Iterate through the docs to find the specified doc and its children.
+	for _, doc := range docs {
+		if doc.Slug == state.Slug.ValueString() {
+			parentDoc = &doc
+			slugsToDelete = append(slugsToDelete, doc.Slug)
+
 			for _, child := range doc.Children {
-				slugs = append(slugs, child.Slug)
+				slugsToDelete = append(slugsToDelete, child.Slug)
+				for _, grandchild := range child.Children {
+					slugsToDelete = append(slugsToDelete, grandchild.Slug)
+				}
 			}
 
-			// Get the provider's attribute
+			break
+		}
+	}
+
+	// If the specified doc was not found, return an error.
+	if parentDoc == nil {
+		resp.Diagnostics.AddError(
+			"Doc not found",
+			fmt.Sprintf("The doc with slug '%s' was not found in the retrieved category docs.", state.Slug.ValueString()),
+		)
+
+		return
+	}
+
+	// If the doc has children and DestroyChildDocs is not enabled, return an error.
+	if len(parentDoc.Children) > 0 && !r.config.DestroyChildDocs.ValueBool() {
+		resp.Diagnostics.AddError(
+			fmt.Sprintf("Doc '%s' has child docs. Child docs must be deleted first.", state.Slug.ValueString()),
+			"Set 'config.destroy_child_docs' to true or delete child docs first.",
+		)
+
+		return
+	}
+
+	// Delete all docs in the slugsToDelete slice, ensuring children are deleted before the parent.
+	// reverse order
+	// for _, slug := range slugsToDelete {
+	for i := len(slugsToDelete) - 1; i >= 0; i-- {
+		slug := slugsToDelete[i]
+		tflog.Info(ctx, fmt.Sprintf("deleting doc with slug %s and request options=%+v", slug, requestOpts))
+		_, apiResponse, err := r.client.Doc.Delete(slug, requestOpts)
+		if err != nil {
 			resp.Diagnostics.AddError(
-				"Unable to delete doc.",
-				fmt.Sprintf("Doc has child docs. Delete child docs first (%+v).", slugs),
-			)
+				fmt.Sprintf("Unable to delete doc with slug '%s'", slug),
+				clientError(err, apiResponse))
 
 			return
 		}
 	}
 
-	// Delete the doc.
-	_, apiResponse, err := r.client.Doc.Delete(state.Slug.ValueString(), requestOpts)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to delete doc", clientError(err, apiResponse))
+	// Log a warning if children were deleted and destroy_child_docs is enabled.
+	if len(slugsToDelete) > 1 && r.config.DestroyChildDocs.ValueBool() {
+		resp.Diagnostics.AddWarning(
+			fmt.Sprintf("Doc '%s' and its child docs were destroyed!", state.Slug.ValueString()),
+			fmt.Sprintf("Child docs: %s", strings.Join(slugsToDelete[:len(slugsToDelete)-1], ", ")),
+		)
 	}
 }
 
@@ -616,36 +705,8 @@ func (r *docResource) Schema(
 	resp *resource.SchemaResponse,
 ) {
 	resp.Schema = schema.Schema{
-		Description: strings.Join([]string{
-			"Manage docs on ReadMe.com",
-			"Docs on ReadMe support setting some attributes using front matter. ",
-			"Resource attributes take precedence over front matter attributes in ",
-			"the provider.",
-			"\n\n",
-			"Refer to <https://docs.readme.com/main/docs/rdme> for more information",
-			"about using front matter in ReadMe docs and custom pages.",
-			"\n\n",
-			"See <https://docs.readme.com/main/reference/getdoc> for more information about this API endpoint.",
-			"\n\n",
-			"## Doc Slugs",
-			"\n\n",
-			"Docs in ReadMe are uniquely identified by their slugs. The slug is a URL-friendly string that",
-			"is generated upon doc creation. By default, this is a normalized version of the doc title.",
-			"The slug cannot be altered using the API or the Terraform Provider, but can be edited in the",
-			"ReadMe web UI.",
-			"\n\n",
-			"This creates challenges when managing docs with Terraform. To address this, the provider",
-			"supports the `use_slug` attribute. When set, the provider will attempt to manage an existing",
-			"doc by its slug. This can also be set in front matter using the `slug` key.",
-			"\n\n",
-			"If this attribute is set and the doc does not exist, an error will be returned. This is intended",
-			"to be set when inheriting management of an existing doc or when customizing the slug *after*",
-			"the doc has been created.",
-			"\n\n",
-			"Note that doc slugs are shared between Guides and API Specification References.",
-			"\n\n",
-			"**The `use_slug` attribute is expierimental and may result in unexpected behavior.**",
-		}, " "),
+		Description:         docResourceDesc,
+		MarkdownDescription: docResourceDesc,
 		Attributes: map[string]schema.Attribute{
 			"algolia": schema.SingleNestedAttribute{
 				Description: "Metadata about the Algolia search integration. " +

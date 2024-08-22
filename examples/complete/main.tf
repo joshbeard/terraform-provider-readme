@@ -13,8 +13,8 @@ variable "api_token" {
 
 provider "readme" {
   api_token = var.api_token
-  features = {
-    destroy_docs_children = true
+  config = {
+    destroy_child_docs = true
   }
 }
 
@@ -64,6 +64,29 @@ resource "readme_doc" "example" {
   # verify_parent_doc = true
 
   # use_slug = "existing-doc-slug"
+}
+
+resource "readme_doc" "example_sub_doc" {
+  title           = "Test Sub Doc"
+  version         = readme_version.example.version_clean
+  category_slug   = readme_category.example.slug
+  hidden          = false
+  order           = 1
+  type            = "basic"
+  body            = "This is a test doc"
+  parent_doc_slug = readme_doc.example.slug
+}
+
+resource "readme_doc" "example_sub_doc_1" {
+  title           = "Test Sub Doc 1"
+  version         = readme_version.example.version_clean
+  category_slug   = readme_category.example.slug
+  hidden          = false
+  order           = 1
+  type            = "basic"
+  body            = "This is a test doc 1"
+  #parent_doc_slug = readme_doc.example_sub_doc.slug
+  parent_doc_slug = "test-sub-doc"
 }
 
 resource "readme_doc" "pets" {
